@@ -8,8 +8,8 @@ export const POST = handle(async (req: Request) => {
   limitAuthAttempts(req);
   const user = await requireUser();
   const body = await readJson<Record<string, unknown>>(req);
-  return json(toUserDTO(confirmEmailChange(user, body.code)));
+  return json(toUserDTO(await confirmEmailChange(user, body.code)));
 });
 
 // DELETE /api/profile/email -> UserDTO — cancels the pending change, the current email stays
-export const DELETE = handle(async () => json(toUserDTO(cancelEmailChange(await requireUser()))));
+export const DELETE = handle(async () => json(toUserDTO(await cancelEmailChange(await requireUser()))));

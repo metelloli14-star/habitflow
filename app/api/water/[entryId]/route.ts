@@ -8,5 +8,5 @@ type Ctx = { params: Promise<{ entryId: string }> };
 export const DELETE = handle(async (_req: Request, { params }: Ctx) => {
   const user = await requireUser();
   const { entryId } = await params;
-  return json(removeWaterEntry(user, entryId));
+  return json(await removeWaterEntry(user, entryId));
 });

@@ -33,10 +33,10 @@ export async function GET(req: Request) {
     if (flow.mode === 'link') {
       const user = await getCurrentUser();
       if (!user) return back('/login', 'Войдите в аккаунт, чтобы привязать VK ID');
-      linkVk(user, profile);
+      await linkVk(user, profile);
       return back('/profile?vk=linked');
     }
-    const { user, created } = loginWithVk(profile, isValidDateStr(flow.date) ? flow.date : todayStr());
+    const { user, created } = await loginWithVk(profile, isValidDateStr(flow.date) ? flow.date : todayStr());
     await startSession(user.id);
     return back(created ? '/start' : '/home');
   } catch (err) {

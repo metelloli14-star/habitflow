@@ -1,0 +1,111 @@
+// Схема базы данных (PostgreSQL). Таблицы и колонки в БД — в snake_case (@@map / @map),
+// в коде — camelCase. После изменения схемы: `npm run db:migrate -- --name <что_изменили>`.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../db/generated"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String    @id @default(uuid()) @db.Uuid
+  name          String
+  /// В нижнем регистре. NULL — у аккаунта VK ID, которому VK не передал email.
+  email         String?   @unique
+  /// Пустая строка — у аккаунта VK ID, которому ещё не задали пароль.
+  passwordHash  String    @default("") @map("password_hash")
+  /// 'Мужской' | 'Женский' | ''
+  gender        String    @default("")
+  /// Фото профиля: data URL (JPEG/PNG/WebP) до ~400 КБ.
+  avatar        String?
+  waterGoal     Int       @default(2000) @map("water_goal")
+  emailVerified Boolean   @default(false) @map("email_verified")
+  /// Активные одноразовые коды по назначению (см. lib/server/services/codes.ts).
+  codes         Json      @default("{}")
+  /// Новый email, ожидающий подтверждения кодом; текущий email работает до подтверждения.
+  pendingEmail  String?   @map("pending_email")
+  vkId          String?   @unique @map("vk_id")
+  /// Неверных паролей подряд; сбрасывается при успешном входе.
+  loginFailures Int       @default(0) @map("login_failures")
+  lockedUntil   DateTime? @map("locked_until") @db.Timestamptz(3)
+  /// Первый день использования — для честного среднего за месяц.
+  firstUseDate  DateTime  @map("first_use_date") @db.Date
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  sessions     Session[]
+  habits       Habit[]
+  completions  Completion[]
+  waterEntries WaterEntry[]
+
+  @@map("users")
+}
+
+/// Сессия входа: id — токен из httpOnly-cookie. Живёт 30 дней от createdAt.
+model Session {
+  id        String   @id @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model Habit {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  title        String
+  /// 'Здоровье' | 'Хобби' | 'Разум'
+  category     String
+  /// 'Ежедневно' | 'Еженедельно' | 'Ежемесячно'
+  frequency    String
+  /// Дни недели ('Пн'…'Вс') для еженедельных, числа месяца ('1'…'31') для ежемесячных.
+  days         String[] @default([])
+  /// 'HH:MM' или пустая строка (без напоминания).
+  reminderTime String   @default("") @map("reminder_time")
+  /// Цель: { title, description, targetCount, deadline } или NULL.
+  goal         Json?
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  completions Completion[]
+
+  @@index([userId])
+  @@map("habits")
+}
+
+/// Журнал выполнения: одна строка = привычка выполнена в этот день (локальный день пользователя).
+/// Серии, прогресс целей и статистика вычисляются из журнала.
+model Completion {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  habitId   String   @map("habit_id") @db.Uuid
+  date      DateTime @db.Date
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  habit Habit @relation(fields: [habitId], references: [id], onDelete: Cascade)
+
+  @@unique([habitId, date])
+  @@index([userId, date])
+  @@map("completions")
+}
+
+model WaterEntry {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  date      DateTime @db.Date
+  amount    Int
+  /// 'HH:MM', местное время пользователя.
+  time      String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+  @@map("water_entries")
+}

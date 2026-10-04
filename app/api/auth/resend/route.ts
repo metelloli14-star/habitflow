@@ -8,7 +8,7 @@ export const POST = handle(async (req: Request) => {
   limitEmailSends(req);
   const body = await readJson<Record<string, unknown>>(req);
   const email = validateEmail(body.email);
-  const user = findUserByEmail(email);
+  const user = await findUserByEmail(email);
   if (!user || user.emailVerified) throw new ApiError(400, 'Этот email не ждёт подтверждения', 'nothing_to_verify');
   return json({ email, ...devCode(await issueVerificationCode(user)) });
 });

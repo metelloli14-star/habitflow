@@ -6,12 +6,12 @@ import { validateHabitInput } from '@/lib/server/validation';
 // GET /api/habits?date=YYYY-MM-DD -> HabitDTO[]
 export const GET = handle(async (req: Request) => {
   const user = await requireUser();
-  return json(listHabits(user.id, requestDate(req)));
+  return json(await listHabits(user.id, requestDate(req)));
 });
 
 // POST /api/habits?date=YYYY-MM-DD  HabitInput -> HabitDTO
 export const POST = handle(async (req: Request) => {
   const user = await requireUser();
   const input = validateHabitInput(await readJson(req), false);
-  return json(createHabit(user.id, input, requestDate(req)), 201);
+  return json(await createHabit(user.id, input, requestDate(req)), 201);
 });

@@ -1,20 +1,18 @@
-import { db } from '@/db';
+import { fromDbDate, isUuid, prisma, toDbDate } from '@/db';
 import type { UserRecord } from '@/db/schema';
 import type { WaterDayDTO } from '@/lib/shared/types';
 import { ApiError } from '../http';
 
-export function waterTotalsByDate(userId: string): Map<string, number> {
-  const totals = new Map<string, number>();
-  for (const e of db.waterEntries.find((e) => e.userId === userId)) {
-    totals.set(e.date, (totals.get(e.date) ?? 0) + e.amount);
-  }
-  return totals;
+export async function waterTotalsByDate(userId: string): Promise<Map<string, number>> {
+  const rows = await prisma.waterEntry.groupBy({ by: ['date'], where: { userId }, _sum: { amount: true } });
+  return new Map(rows.map((r) => [fromDbDate(r.date), r._sum.amount ?? 0]));
 }
 
-export function getWaterDay(user: UserRecord, date: string): WaterDayDTO {
-  const rows = db.waterEntries
-    .find((e) => e.userId === user.id && e.date === date)
-    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+export async function getWaterDay(user: UserRecord, date: string): Promise<WaterDayDTO> {
+  const rows = await prisma.waterEntry.findMany({
+    where: { userId: user.id, date: toDbDate(date) },
+    orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+  });
   let running = 0;
   const entries = rows.map((e) => {
     running += e.amount;
@@ -23,17 +21,17 @@ export function getWaterDay(user: UserRecord, date: string): WaterDayDTO {
   return { date, goal: user.waterGoal, amount: running, entries };
 }
 
-export function addWater(user: UserRecord, date: string, amount: unknown, time: unknown): WaterDayDTO {
+export async function addWater(user: UserRecord, date: string, amount: unknown, time: unknown): Promise<WaterDayDTO> {
   const ml = Number(amount);
   if (!Number.isInteger(ml) || ml < 1 || ml > 5000) throw new ApiError(400, 'Некорректный объём воды', 'invalid_amount');
   const hhmm = typeof time === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(time) ? time : '';
-  db.waterEntries.insert({ userId: user.id, date, amount: ml, time: hhmm, createdAt: new Date().toISOString() });
+  await prisma.waterEntry.create({ data: { userId: user.id, date: toDbDate(date), amount: ml, time: hhmm } });
   return getWaterDay(user, date);
 }
 
-export function removeWaterEntry(user: UserRecord, entryId: string): WaterDayDTO {
-  const entry = db.waterEntries.findById(entryId);
-  if (!entry || entry.userId !== user.id) throw new ApiError(404, 'Запись не найдена', 'not_found');
-  db.waterEntries.remove(entryId);
-  return getWaterDay(user, entry.date);
+export async function removeWaterEntry(user: UserRecord, entryId: string): Promise<WaterDayDTO> {
+  const entry = isUuid(entryId) ? await prisma.waterEntry.findFirst({ where: { id: entryId, userId: user.id } }) : null;
+  if (!entry) throw new ApiError(404, 'Запись не найдена', 'not_found');
+  await prisma.waterEntry.deleteMany({ where: { id: entryId } });
+  return getWaterDay(user, fromDbDate(entry.date));
 }

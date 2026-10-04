@@ -8,5 +8,5 @@ type Ctx = { params: Promise<{ id: string }> };
 export const POST = handle(async (req: Request, { params }: Ctx) => {
   const user = await requireUser();
   const { id } = await params;
-  return json(toggleCompletion(user.id, id, requestDate(req)));
+  return json(await toggleCompletion(user.id, id, requestDate(req)));
 });

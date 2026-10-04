@@ -1,13 +1,15 @@
-import { db } from '@/db';
 import type { UserRecord } from '@/db/schema';
 import { addDays, isHabitScheduledOn, startOfMonth, startOfWeek, weekdayLabel } from '@/lib/shared/dates';
 import type { StatsDTO } from '@/lib/shared/types';
-import { completionDatesByHabit, computeStreak, habitStartDate } from './habits';
+import { completionDatesByHabit, computeStreak, findHabits, habitStartDate } from './habits';
 import { waterTotalsByDate } from './water';
 
-export function getStats(user: UserRecord, today: string): StatsDTO {
-  const habits = db.habits.find((h) => h.userId === user.id);
-  const doneByHabit = completionDatesByHabit(user.id);
+export async function getStats(user: UserRecord, today: string): Promise<StatsDTO> {
+  const [habits, doneByHabit, water] = await Promise.all([
+    findHabits(user.id),
+    completionDatesByHabit(user.id),
+    waterTotalsByDate(user.id),
+  ]);
 
   /** % of the habits scheduled on that day that were done, or null if nothing was scheduled. */
   const dayCompletion = (date: string): number | null => {
@@ -46,7 +48,6 @@ export function getStats(user: UserRecord, today: string): StatsDTO {
   }
 
   // Water: a day without entries is 0 ml. The weekly average covers the days of this week so far.
-  const water = waterTotalsByDate(user.id);
   const waterWeek = weekDates.map((date) => ({ date, label: weekdayLabel(date), value: water.get(date) ?? 0 }));
   const elapsed = waterWeek.filter((d) => d.date <= today);
   const waterAverage = Math.round(elapsed.reduce((s, d) => s + d.value, 0) / Math.max(1, elapsed.length));

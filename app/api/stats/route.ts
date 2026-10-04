@@ -5,5 +5,5 @@ import { getStats } from '@/lib/server/services/stats';
 // GET /api/stats?date=YYYY-MM-DD -> StatsDTO
 export const GET = handle(async (req: Request) => {
   const user = await requireUser();
-  return json(getStats(user, requestDate(req)));
+  return json(await getStats(user, requestDate(req)));
 });

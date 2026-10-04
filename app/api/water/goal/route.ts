@@ -1,4 +1,4 @@
-import { db } from '@/db';
+import { updateUser } from '@/db';
 import { requireUser, toUserDTO } from '@/lib/server/auth';
 import { handle, json, readJson } from '@/lib/server/http';
 import { validateWaterGoal } from '@/lib/server/validation';
@@ -7,5 +7,5 @@ import { validateWaterGoal } from '@/lib/server/validation';
 export const PATCH = handle(async (req: Request) => {
   const user = await requireUser();
   const body = await readJson<Record<string, unknown>>(req);
-  return json(toUserDTO(db.users.update(user.id, { waterGoal: validateWaterGoal(body.goal) })!));
+  return json(toUserDTO(await updateUser(user.id, { waterGoal: validateWaterGoal(body.goal) })));
 });

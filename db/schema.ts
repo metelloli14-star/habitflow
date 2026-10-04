@@ -1,5 +1,5 @@
-// "Tables" of the mock database. Shapes are chosen so they map 1:1 onto a real DB later
-// (Supabase/Postgres or Firebase): every record has a string id and foreign keys are explicit.
+// Records the services work with. The tables themselves are defined in prisma/schema.prisma;
+// db/index.ts converts database rows into these shapes (dates as 'YYYY-MM-DD' / ISO strings).
 
 import type { Category, Frequency, Gender, HabitGoal } from '@/lib/shared/types';
 
@@ -40,13 +40,6 @@ export interface OneTimeCode {
   attempts: number;
 }
 
-export interface SessionRecord {
-  /** The session token stored in the httpOnly cookie. */
-  id: string;
-  userId: string;
-  createdAt: string;
-}
-
 export interface HabitRecord {
   id: string;
   userId: string;
@@ -57,37 +50,4 @@ export interface HabitRecord {
   reminderTime: string;
   goal: HabitGoal | null;
   createdAt: string;
-}
-
-/** One row per day a habit was marked done. Streaks, progress and stats are all derived from these. */
-export interface HabitCompletionRecord {
-  id: string;
-  userId: string;
-  habitId: string;
-  /** YYYY-MM-DD */
-  date: string;
-  createdAt: string;
-}
-
-export interface WaterEntryRecord {
-  id: string;
-  userId: string;
-  /** YYYY-MM-DD */
-  date: string;
-  amount: number;
-  /** HH:MM, the person's local time */
-  time: string;
-  createdAt: string;
-}
-
-export interface DatabaseShape {
-  users: UserRecord[];
-  sessions: SessionRecord[];
-  habits: HabitRecord[];
-  completions: HabitCompletionRecord[];
-  waterEntries: WaterEntryRecord[];
-}
-
-export function emptyDatabase(): DatabaseShape {
-  return { users: [], sessions: [], habits: [], completions: [], waterEntries: [] };
 }

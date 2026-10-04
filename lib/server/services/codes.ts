@@ -3,7 +3,7 @@
 // of attempts, and can be re-sent at most once a minute.
 
 import { randomInt } from 'node:crypto';
-import { db } from '@/db';
+import { findUserById, updateUser } from '@/db';
 import type { CodePurpose, UserRecord } from '@/db/schema';
 import { codeEmail } from '../emails';
 import { ApiError } from '../http';
@@ -29,8 +29,8 @@ export async function issueCode(user: UserRecord, purpose: CodePurpose, sendTo: 
   }
   const code = String(randomInt(0, 10_000)).padStart(4, '0');
   await sendMail(codeEmail(sendTo, purpose, code, CODE_TTL_MS / 60_000));
-  const latest = db.users.findById(user.id)?.codes ?? user.codes;
-  db.users.update(user.id, {
+  const latest = (await findUserById(user.id))?.codes ?? user.codes;
+  await updateUser(user.id, {
     codes: {
       ...latest,
       [purpose]: {
@@ -46,7 +46,7 @@ export async function issueCode(user: UserRecord, purpose: CodePurpose, sendTo: 
 }
 
 /** Checks a code. On success the code is used up; otherwise throws a clear error and counts the attempt. */
-export function consumeCode(user: UserRecord, purpose: CodePurpose, code: unknown, now = Date.now()): void {
+export async function consumeCode(user: UserRecord, purpose: CodePurpose, code: unknown, now = Date.now()): Promise<void> {
   const current = user.codes?.[purpose];
   if (!current || now > Date.parse(current.expiresAt)) {
     throw new ApiError(400, 'Срок действия кода истёк. Отправьте новый код', 'code_expired');
@@ -55,7 +55,7 @@ export function consumeCode(user: UserRecord, purpose: CodePurpose, code: unknow
     throw new ApiError(429, 'Слишком много неверных попыток. Отправьте новый код', 'too_many_attempts');
   }
   if (typeof code !== 'string' || code !== current.code) {
-    db.users.update(user.id, { codes: { ...user.codes, [purpose]: { ...current, attempts: current.attempts + 1 } } });
+    await updateUser(user.id, { codes: { ...user.codes, [purpose]: { ...current, attempts: current.attempts + 1 } } });
     const left = MAX_CODE_ATTEMPTS - current.attempts - 1;
     throw new ApiError(400, left > 0
       ? `Неверный код. Осталось попыток: ${left}`
@@ -63,5 +63,5 @@ export function consumeCode(user: UserRecord, purpose: CodePurpose, code: unknow
   }
   const rest = { ...user.codes };
   delete rest[purpose];
-  db.users.update(user.id, { codes: rest });
+  await updateUser(user.id, { codes: rest });
 }

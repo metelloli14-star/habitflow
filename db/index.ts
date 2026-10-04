@@ -1,123 +1,114 @@
-// Mock database: in-memory collections persisted to db/data.json.
+// Database access: PostgreSQL through Prisma (schema — prisma/schema.prisma).
 //
-// Every function the API uses goes through the `db` object below. To switch to a real database,
-// re-implement the same Collection interface on top of Supabase / Prisma / Firestore — the API routes
-// and services won't need to change.
+// Services work with the record types from db/schema.ts: dates as 'YYYY-MM-DD' and ISO strings,
+// '' for "no email". The helpers below convert between those records and database rows.
 //
-// Notes:
-// - Server-only (uses the file system). Never import this from a client component.
-// - Data is cached per server process; if you edit data.json by hand, restart `npm run dev`.
-// - `npm run db:reset` deletes data.json; it's re-created from db/seed.ts on the next request.
+// Server-only. Never import this from a client component.
 
-import fs from 'node:fs';
-import path from 'node:path';
-import { randomUUID } from 'node:crypto';
-import { emptyDatabase, type DatabaseShape } from './schema';
-import { createSeedData } from './seed';
+import { PrismaPg } from '@prisma/adapter-pg';
+import type { Gender } from '@/lib/shared/types';
+import { Prisma, PrismaClient, type Habit, type User } from './generated/client';
+import type { HabitRecord, UserRecord } from './schema';
 
-const DATA_FILE = path.join(process.cwd(), 'db', 'data.json');
+export { Prisma };
 
-type CollectionName = keyof DatabaseShape;
-type RecordOf<K extends CollectionName> = DatabaseShape[K][number];
+const globalForPrisma = globalThis as unknown as { __habitflowPrisma?: PrismaClient };
 
-const globalForDb = globalThis as unknown as { __habitflowDb?: DatabaseShape };
-
-function persist(data: DatabaseShape): void {
-  try {
-    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf8');
-  } catch (err) {
-    // Read-only file systems (e.g. some serverless hosts) keep working in memory only.
-    console.warn('[mock-db] Could not write data.json, continuing in memory:', err);
-  }
+function createClient(): PrismaClient {
+  const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+  return new PrismaClient({ adapter });
 }
 
-function load(): DatabaseShape {
-  if (globalForDb.__habitflowDb) return globalForDb.__habitflowDb;
-  let data: DatabaseShape;
-  try {
-    data = { ...emptyDatabase(), ...JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')) };
-  } catch {
-    data = createSeedData();
-    persist(data);
-    console.info('[mock-db] Created db/data.json with demo data (demo@habitflow.ru / demo12345).');
-  }
-  globalForDb.__habitflowDb = data;
+// One client (and connection pool) per server process; `next dev` reloads modules, so it's kept on globalThis.
+export const prisma = (globalForPrisma.__habitflowPrisma ??= createClient());
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Ids come from URLs and cookies; anything that isn't a UUID can't exist (and Postgres would reject it). */
+export const isUuid = (value: string): boolean => UUID_RE.test(value);
+
+/** 'YYYY-MM-DD' → value for a DATE column (Prisma uses UTC midnight for those). */
+export const toDbDate = (date: string): Date => new Date(`${date}T00:00:00Z`);
+
+/** DATE column → 'YYYY-MM-DD'. */
+export const fromDbDate = (date: Date): string => date.toISOString().slice(0, 10);
+
+// ---------------- Rows → records ----------------
+
+export function toUserRecord(row: User): UserRecord {
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email ?? '',
+    passwordHash: row.passwordHash,
+    gender: row.gender as Gender,
+    avatar: row.avatar,
+    waterGoal: row.waterGoal,
+    emailVerified: row.emailVerified,
+    codes: row.codes as UserRecord['codes'],
+    pendingEmail: row.pendingEmail,
+    vkId: row.vkId,
+    loginFailures: row.loginFailures,
+    lockedUntil: row.lockedUntil?.toISOString() ?? null,
+    firstUseDate: fromDbDate(row.firstUseDate),
+    createdAt: row.createdAt.toISOString(),
+  };
+}
+
+export function toHabitRecord(row: Habit): HabitRecord {
+  return {
+    id: row.id,
+    userId: row.userId,
+    title: row.title,
+    category: row.category as HabitRecord['category'],
+    frequency: row.frequency as HabitRecord['frequency'],
+    days: row.days,
+    reminderTime: row.reminderTime,
+    goal: row.goal as HabitRecord['goal'],
+    createdAt: row.createdAt.toISOString(),
+  };
+}
+
+// ---------------- Users ----------------
+
+export type NewUser = Pick<UserRecord, 'name' | 'email' | 'passwordHash' | 'gender' | 'avatar' | 'waterGoal' | 'emailVerified' | 'firstUseDate'>
+  & { vkId?: string | null };
+
+export type UserPatch = Partial<Omit<UserRecord, 'id' | 'createdAt'>>;
+
+function toUserData(patch: UserPatch): Prisma.UserUpdateInput {
+  const { email, codes, lockedUntil, firstUseDate, ...rest } = patch;
+  const data: Prisma.UserUpdateInput = { ...rest };
+  if (email !== undefined) data.email = email || null;
+  if (codes !== undefined) data.codes = { ...codes } as Prisma.InputJsonObject;
+  if (lockedUntil !== undefined) data.lockedUntil = lockedUntil ? new Date(lockedUntil) : null;
+  if (firstUseDate !== undefined) data.firstUseDate = toDbDate(firstUseDate);
   return data;
 }
 
-// Records are cloned on the way in and out so callers can't accidentally change stored data
-// without going through update() (which is what persists changes).
-const clone = <T,>(value: T): T => structuredClone(value);
-
-export interface Collection<T extends { id: string }> {
-  all(): T[];
-  find(predicate: (item: T) => boolean): T[];
-  findOne(predicate: (item: T) => boolean): T | undefined;
-  findById(id: string): T | undefined;
-  insert(item: Omit<T, 'id'> & { id?: string }): T;
-  update(id: string, patch: Partial<Omit<T, 'id'>>): T | undefined;
-  remove(id: string): boolean;
-  removeWhere(predicate: (item: T) => boolean): number;
+export async function findUserById(id: string): Promise<UserRecord | undefined> {
+  const row = await prisma.user.findUnique({ where: { id } });
+  return row ? toUserRecord(row) : undefined;
 }
 
-function collection<K extends CollectionName>(name: K): Collection<RecordOf<K>> {
-  type T = RecordOf<K>;
-  const rows = (): T[] => load()[name] as T[];
-  const setRows = (next: T[]) => {
-    const data = load();
-    (data as unknown as Record<CollectionName, unknown[]>)[name] = next;
-    persist(data);
-  };
-
-  return {
-    all: () => clone(rows()),
-    find: (predicate) => clone(rows().filter(predicate)),
-    findOne: (predicate) => {
-      const found = rows().find(predicate);
-      return found ? clone(found) : undefined;
-    },
-    findById: (id) => {
-      const found = rows().find((r) => r.id === id);
-      return found ? clone(found) : undefined;
-    },
-    insert: (item) => {
-      const record = { ...clone(item), id: item.id ?? randomUUID() } as T;
-      setRows([...rows(), record]);
-      return clone(record);
-    },
-    update: (id, patch) => {
-      let updated: T | undefined;
-      setRows(
-        rows().map((r) => {
-          if (r.id !== id) return r;
-          updated = { ...r, ...clone(patch), id } as T;
-          return updated;
-        }),
-      );
-      return updated ? clone(updated) : undefined;
-    },
-    remove: (id) => {
-      const before = rows();
-      const next = before.filter((r) => r.id !== id);
-      if (next.length === before.length) return false;
-      setRows(next);
-      return true;
-    },
-    removeWhere: (predicate) => {
-      const before = rows();
-      const next = before.filter((r) => !predicate(r));
-      if (next.length !== before.length) setRows(next);
-      return before.length - next.length;
-    },
-  };
+export async function findUserByEmail(email: string): Promise<UserRecord | undefined> {
+  if (!email) return undefined;
+  const row = await prisma.user.findUnique({ where: { email } });
+  return row ? toUserRecord(row) : undefined;
 }
 
-export const db = {
-  users: collection('users'),
-  sessions: collection('sessions'),
-  habits: collection('habits'),
-  completions: collection('completions'),
-  waterEntries: collection('waterEntries'),
-};
+export async function findUserByVkId(vkId: string): Promise<UserRecord | undefined> {
+  const row = await prisma.user.findUnique({ where: { vkId } });
+  return row ? toUserRecord(row) : undefined;
+}
 
-export type Db = typeof db;
+export async function createUser(user: NewUser): Promise<UserRecord> {
+  const row = await prisma.user.create({
+    data: { ...user, email: user.email || null, firstUseDate: toDbDate(user.firstUseDate) },
+  });
+  return toUserRecord(row);
+}
+
+export async function updateUser(id: string, patch: UserPatch): Promise<UserRecord> {
+  return toUserRecord(await prisma.user.update({ where: { id }, data: toUserData(patch) }));
+}

@@ -1,4 +1,4 @@
-import { db } from '@/db';
+import { updateUser, type UserPatch } from '@/db';
 import { requireUser, toUserDTO } from '@/lib/server/auth';
 import { handle, json, readJson } from '@/lib/server/http';
 import { limitEmailSends } from '@/lib/server/rateLimit';
@@ -14,7 +14,7 @@ export const GET = handle(async () => json(toUserDTO(await requireUser())));
 export const PATCH = handle(async (req: Request) => {
   const user = await requireUser();
   const body = await readJson<Record<string, unknown>>(req);
-  const patch: Parameters<typeof db.users.update>[1] = {};
+  const patch: UserPatch = {};
   if ('name' in body) patch.name = validateName(body.name);
   if ('gender' in body) patch.gender = validateGender(body.gender);
   if ('avatar' in body) patch.avatar = validateAvatar(body.avatar);
@@ -23,6 +23,6 @@ export const PATCH = handle(async (req: Request) => {
   // Check the email first so a taken address doesn't leave the other fields half-saved.
   if (newEmail !== null && newEmail !== user.email && newEmail !== user.pendingEmail) limitEmailSends(req);
   const code = newEmail !== null ? await requestEmailChange(user, newEmail) : null;
-  const updated = db.users.update(user.id, patch)!;
+  const updated = await updateUser(user.id, patch);
   return json({ ...toUserDTO(updated), ...devCode(code) });
 });

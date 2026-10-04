@@ -9,7 +9,7 @@ export const POST = handle(async (req: Request) => {
   limitAuthAttempts(req);
   const body = await readJson<Record<string, unknown>>(req);
   const password = validatePassword(body.password);
-  const user = resetPassword(validateEmail(body.email), body.code, password);
+  const user = await resetPassword(validateEmail(body.email), body.code, password);
   await startSession(user.id);
   return json(toUserDTO(user));
 });

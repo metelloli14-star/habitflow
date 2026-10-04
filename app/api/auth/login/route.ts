@@ -9,7 +9,7 @@ export const POST = handle(async (req: Request) => {
   limitAuthAttempts(req);
   const body = await readJson<Record<string, unknown>>(req);
   const email = validateEmail(body.email);
-  const user = checkCredentials(email, typeof body.password === 'string' ? body.password : '');
+  const user = await checkCredentials(email, typeof body.password === 'string' ? body.password : '');
   if (!user.emailVerified) {
     let code: string | null = null;
     try {

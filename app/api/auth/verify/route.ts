@@ -9,7 +9,7 @@ import { validateEmail } from '@/lib/server/validation';
 export const POST = handle(async (req: Request) => {
   limitAuthAttempts(req);
   const body = await readJson<Record<string, unknown>>(req);
-  const user = confirmEmailCode(validateEmail(body.email), body.code, requestDate(req));
+  const user = await confirmEmailCode(validateEmail(body.email), body.code, requestDate(req));
   await startSession(user.id);
   return json(toUserDTO(user));
 });

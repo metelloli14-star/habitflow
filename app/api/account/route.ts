@@ -6,6 +6,6 @@ import { deleteAccountData } from '@/lib/server/services/account';
 export const DELETE = handle(async () => {
   const user = await requireUser();
   await endSession();
-  deleteAccountData(user.id);
+  await deleteAccountData(user.id);
   return json({ ok: true });
 });
