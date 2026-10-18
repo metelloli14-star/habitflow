@@ -2,9 +2,16 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { BottomNav } from '@/components/BottomNav';
+import { CookieSettingsLink } from '@/components/Analytics';
 import { StatusBar } from '@/components/StatusBar';
-import { ChartIcon, ChevronRightIcon, CloseIcon, TrendIcon } from '@/components/icons';
+import { ChartIcon, ChevronRightIcon, CloseIcon, ListIcon, TrendIcon, TrophyIcon, UserIcon } from '@/components/icons';
+
+const ITEMS = [
+  { href: '/profile', title: 'Личный кабинет', note: 'Профиль, уведомления, вход', Icon: UserIcon },
+  { href: '/habits', title: 'Мои привычки', note: 'Список, серии, изменение', Icon: ListIcon },
+  { href: '/goals', title: 'Цели', note: 'Прогресс по целям', Icon: TrophyIcon },
+  { href: '/stats', title: 'Статистика', note: 'Результат за неделю и месяц', Icon: ChartIcon },
+];
 
 export default function MenuPage() {
   const router = useRouter();
@@ -19,14 +26,16 @@ export default function MenuPage() {
           <button className="menu-close-btn" onClick={close} aria-label="Закрыть меню"><CloseIcon /></button>
         </div>
 
-        <Link href="/stats" className="menu-item-row" style={{ color: 'inherit' }}>
-          <div className="menu-item-icon"><ChartIcon /></div>
-          <div className="menu-item-info">
-            <h3>Статистика</h3>
-            <p>Результат</p>
-          </div>
-          <ChevronRightIcon className="menu-item-chevron" />
-        </Link>
+        {ITEMS.map(({ href, title, note, Icon }) => (
+          <Link key={href} href={href} className="menu-item-row" style={{ color: 'inherit' }}>
+            <div className="menu-item-icon"><Icon /></div>
+            <div className="menu-item-info">
+              <h3>{title}</h3>
+              <p>{note}</p>
+            </div>
+            <ChevronRightIcon className="menu-item-chevron" />
+          </Link>
+        ))}
 
         <div className="menu-brand">
           <div className="menu-brand-row">
@@ -36,9 +45,9 @@ export default function MenuPage() {
               <div className="menu-brand-tagline">В РИТМЕ ЖИЗНИ</div>
             </div>
           </div>
+          <CookieSettingsLink className="menu-cookie-link" />
         </div>
       </div>
-      <BottomNav />
     </section>
   );
 }

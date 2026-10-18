@@ -6,9 +6,10 @@ import { avatarStyle, initialOf } from '@/components/AvatarButton';
 import { CodeInput } from '@/components/auth/CodeInput';
 import { readVkErrorFromUrl, VkIdButton } from '@/components/auth/VkIdButton';
 import { ConsentText } from '@/components/auth/fields';
-import { BottomNav } from '@/components/BottomNav';
 import { ConfirmModal, SuccessModal } from '@/components/Modals';
 import { PillGroup } from '@/components/PillGroup';
+import { PushToggle } from '@/components/PushToggle';
+import { UserIcon } from '@/components/icons';
 import { ScreenBackground } from '@/components/ScreenBackground';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { StatusBar } from '@/components/StatusBar';
@@ -242,7 +243,7 @@ export default function ProfilePage() {
                 </div>
               )}
               <div className="vk-link-row">
-                <span className="vkid-mark" aria-hidden="true">VK</span>
+                <span className="push-row-icon" aria-hidden="true"><UserIcon /></span>
                 <div className="vk-link-info">
                   <p>VK ID</p>
                   <span>{user?.vkLinked ? 'Привязан — можно входить через VK ID' : 'Не привязан'}</span>
@@ -253,6 +254,7 @@ export default function ProfilePage() {
               </div>
               {vkError && <p className="form-error" role="alert" style={{ marginTop: 10 }}>{vkError}</p>}
               {vkNotice && !vkError && <p className="form-success" style={{ marginTop: 10 }}>{vkNotice}</p>}
+              <PushToggle />
               <div className="profile-consent-row">
                 <button type="button" className={'profile-consent-check' + (consent ? ' checked' : '')} aria-pressed={consent}
                   aria-label="Согласен и ознакомлен с политикой конфиденциальности и обработкой персональных данных" onClick={() => setConsent((c) => !c)}>
@@ -271,7 +273,6 @@ export default function ProfilePage() {
           </>
         )}
       </div>
-      <BottomNav />
       <SuccessModal open={savedOpen}
         title={user?.pendingEmail ? 'Изменения сохранены. Подтвердите новый email кодом из письма' : 'Изменения сохранены'}
         onClose={() => setSavedOpen(false)} />

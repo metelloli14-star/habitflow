@@ -25,6 +25,7 @@ export const PlusIcon = (p: P) => <svg {...base} strokeWidth={2.4} {...p}><path 
 export const GlassIcon = (p: P) => <svg {...base} strokeWidth={1.8} {...p}><path d="M6 3h12l-1.2 16.2A2 2 0 0 1 14.8 21H9.2a2 2 0 0 1-2-1.8L6 3z" /><path d="M6.6 9h10.8" /></svg>;
 export const BottleIcon = (p: P) => <svg {...base} strokeWidth={1.8} {...p}><path d="M10 2h4v3.5l1.6 1.8c.26.3.4.67.4 1.06V20a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2V8.36c0-.39.14-.76.4-1.06L9.5 5.5V3z" /><path d="M9.4 12h5.2" /></svg>;
 export const BellIcon = (p: P) => <svg {...base} strokeWidth={2} {...p}><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>;
+export const UserIcon = (p: P) => <svg {...base} strokeWidth={1.9} {...p}><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7" /></svg>;
 export const ChartIcon = (p: P) => <svg {...base} strokeWidth={1.8} {...p}><path d="M3 3v18h18" /><path d="M7 15l4-4 3 3 5-6" /></svg>;
 export const TargetIcon = (p: P) => (
   <svg {...base} strokeWidth={1.6} {...p}>

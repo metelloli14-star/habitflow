@@ -42,7 +42,7 @@ export function toUserRecord(row: User): UserRecord {
     email: row.email ?? '',
     passwordHash: row.passwordHash,
     gender: row.gender as Gender,
-    avatar: row.avatar,
+    avatarVersion: row.avatarVersion,
     waterGoal: row.waterGoal,
     emailVerified: row.emailVerified,
     codes: row.codes as UserRecord['codes'],
@@ -51,6 +51,9 @@ export function toUserRecord(row: User): UserRecord {
     loginFailures: row.loginFailures,
     lockedUntil: row.lockedUntil?.toISOString() ?? null,
     firstUseDate: fromDbDate(row.firstUseDate),
+    timeZone: row.timeZone,
+    waterReminders: row.waterReminders,
+    weeklySummary: row.weeklySummary,
     createdAt: row.createdAt.toISOString(),
   };
 }
@@ -71,7 +74,7 @@ export function toHabitRecord(row: Habit): HabitRecord {
 
 // ---------------- Users ----------------
 
-export type NewUser = Pick<UserRecord, 'name' | 'email' | 'passwordHash' | 'gender' | 'avatar' | 'waterGoal' | 'emailVerified' | 'firstUseDate'>
+export type NewUser = Pick<UserRecord, 'name' | 'email' | 'passwordHash' | 'gender' | 'waterGoal' | 'emailVerified' | 'firstUseDate'>
   & { vkId?: string | null };
 
 export type UserPatch = Partial<Omit<UserRecord, 'id' | 'createdAt'>>;

@@ -3,10 +3,12 @@
 export { useToday } from './useToday';
 export { useSession, authApi } from './useSession';
 export type { RegisterResult } from './useSession';
-export { useHabits, useHabit } from './useHabits';
+export { useHabits, useHabit, useHabitHistory } from './useHabits';
 export { useWater } from './useWater';
 export { useStats } from './useStats';
 export { profileApi } from './useProfile';
 export type { ProfileUpdate } from './useProfile';
 export { useReminders, requestReminderPermission } from './useReminders';
+export { usePush } from './usePush';
+export type { PushStatus } from './usePush';
 export { useAuthProviders } from './useAuthProviders';

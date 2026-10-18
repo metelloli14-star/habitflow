@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { CookieSettingsLink } from '@/components/Analytics';
 import { OPERATOR } from '@/lib/shared/legal';
 import { BrandIcon, BrandName } from './Brand';
 
@@ -18,6 +19,7 @@ export function SiteFooter({ currentDoc }: { currentDoc?: string }) {
             {link('privacy-policy', 'Политика конфиденциальности')}
             {link('personal-data', 'Согласие на обработку персональных данных')}
             {link('terms', 'Пользовательское соглашение')}
+            <CookieSettingsLink />
           </div>
         </div>
         <div className="footer-divider mobile-only" />

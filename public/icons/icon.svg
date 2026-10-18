@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="8 4 603 603" width="603" height="603" fill="none">
+  <!-- «Привычка» app icon, from the Figma design (Frame 1 / AppIconSmall) without the drop shadow -->
+  <defs>
+    <linearGradient id="g" x1="309.5" y1="1157.82" x2="927.33" y2="814.617" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#82B4E3"/>
+      <stop offset="1" stop-color="#6CACA5"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="4" width="603" height="603" fill="url(#g)"/>
+  <path d="M148 144V431.111C148 440.629 151.781 449.758 158.512 456.488C165.242 463.219 174.371 467 183.889 467H471M219.778 377.278C228.75 341.389 246.694 251.667 291.556 251.667C327.444 251.667 327.444 305.5 363.333 305.5C408.194 305.5 444.083 215.778 453.056 179.889" stroke="white" stroke-width="19" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -18,7 +18,7 @@ export interface UserDTO {
   name: string;
   email: string;
   gender: Gender;
-  /** Small JPEG data URL, or null when the person has no photo. */
+  /** URL of the profile photo (/api/profile/avatar?v=…), or null when the person has no photo. */
   avatar: string | null;
   /** Daily water goal in ml. */
   waterGoal: number;
@@ -28,6 +28,10 @@ export interface UserDTO {
   vkLinked: boolean;
   /** Account has a password (VK ID accounts may not). */
   hasPassword: boolean;
+  /** Push reminders to drink water (every 2 hours in the daytime). */
+  waterReminders: boolean;
+  /** Push with the week's results on Sunday evening. */
+  weeklySummary: boolean;
 }
 
 /** Fields the person fills in when creating or editing a habit. */

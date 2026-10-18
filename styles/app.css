@@ -1319,7 +1319,7 @@ a.habits-create-btn, a.goals-empty-cta{ display:block; text-align:center; text-d
 .text-link-btn.muted{ color:var(--slate); }
 .email-change-panel .cta-mint{ width:100%; }
 
-/* VK ID button (brand colour #0077FF). Replace .vkid-mark with the official VK ID logo before publishing. */
+/* VK ID button (brand colour #0077FF), text only */
 .vkid-btn{
   display:flex; align-items:center; justify-content:center; gap:10px;
   width:100%; height:52px; border:none; border-radius:24px; cursor:pointer;
@@ -1329,11 +1329,6 @@ a.habits-create-btn, a.goals-empty-cta{ display:block; text-align:center; text-d
 }
 .vkid-btn:hover{ background:#0068e0; }
 .vkid-btn.is-blocked{ opacity:0.55; box-shadow:none; }
-.vkid-mark{
-  display:inline-flex; align-items:center; justify-content:center;
-  width:26px; height:26px; border-radius:8px; background:#fff; color:#0077ff;
-  font-size:11px; font-weight:900; letter-spacing:-0.02em;
-}
 .vkid-mock{
   padding:2px 7px; border-radius:8px; background:rgba(255,255,255,0.25);
   font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;
@@ -1346,7 +1341,6 @@ a.habits-create-btn, a.goals-empty-cta{ display:block; text-align:center; text-d
   display:flex; align-items:center; gap:12px;
   margin-top:18px; padding-top:16px; border-top:1px solid rgba(96,125,142,0.15);
 }
-.vk-link-row .vkid-mark{ width:34px; height:34px; border-radius:10px; background:#0077ff; color:#fff; font-size:13px; flex-shrink:0; }
 .vk-link-info{ flex:1; min-width:0; }
 .vk-link-info p{ margin:0; font-size:14px; font-weight:700; color:var(--navy); }
 .vk-link-info span{ font-size:12.5px; color:var(--slate); }
@@ -1356,4 +1350,260 @@ a.habits-create-btn, a.goals-empty-cta{ display:block; text-align:center; text-d
   background:rgba(108,172,165,0.14); color:#2f6f69;
   font-size:13px; font-weight:600; text-align:center;
 }
-.vk-link-row .vkid-btn .vkid-mark{ display:none; }
+
+/* Push notifications: row in the profile and hint under the reminder time */
+.push-row{
+  display:flex; align-items:center; gap:12px;
+  margin-top:18px; padding-top:16px; border-top:1px solid rgba(96,125,142,0.15);
+}
+.push-row-icon{
+  width:34px; height:34px; border-radius:10px; flex-shrink:0;
+  background:linear-gradient(135deg, var(--blue), var(--mint));
+  display:flex; align-items:center; justify-content:center; color:#fff;
+}
+.push-row-icon svg{ width:18px; height:18px; }
+.push-btn{
+  height:40px; padding:0 16px; border:none; border-radius:14px; cursor:pointer; flex-shrink:0;
+  font-family:inherit; font-size:13.5px; font-weight:700; color:#fff; background:var(--mint);
+  transition:opacity .15s ease;
+}
+.push-btn:disabled{ opacity:0.55; cursor:default; }
+.addhabit-hint{ margin:8px 4px 0; font-size:12.5px; line-height:1.4; color:var(--slate); }
+
+/* ================= Native-app feel ================= */
+:root{
+  --safe-bottom:env(safe-area-inset-bottom, 0px);
+  /* "Done" — a juicy green for completed habits, full days and reached goals */
+  --success:#2fbf5b; --success-deep:#1e9b45; --success-soft:rgba(47,191,91,0.16);
+  --water:#6aaed8;
+}
+html{ -webkit-tap-highlight-color:transparent; -webkit-text-size-adjust:100%; }
+html, body{ overscroll-behavior:none; }
+
+/* The screen runs under the iPhone home indicator; the menu and content stay above it (see --safe-bottom below). */
+#app{ padding-bottom:0; }
+/* Modals, banners and the menu are positioned inside the app frame (on a desktop it's the phone mock).
+   The background shows for a moment while a screen slides in — so it matches the screens, not white. */
+.device{ transform:translateZ(0); background:#dfe7ef; }
+
+/* Switching tabs is instant; screens opened on top (habit, profile, menu…) just fade in where they are —
+   nothing moves. No transform is left on a screen, so the shared menu and modals stack correctly. */
+.screen.active{ transform:none; animation:none; }
+.app-screens[data-transition="push"] .screen.active{ animation:screen-fade .16s ease-out; }
+@keyframes screen-fade{ from{ opacity:0.4; } to{ opacity:1; } }
+
+/* The bottom menu is rendered once by the app layout and stays in place. */
+.home-bottom-nav{ z-index:20; bottom:max(16px, calc(var(--safe-bottom) + 4px)); }
+.home-scroll, .water-scroll, .habits-scroll, .goals-scroll, .menu-scroll, .stats-scroll{ padding-bottom:calc(100px + var(--safe-bottom)); }
+.addhabit-scroll, .edithabit-scroll, .profile-scroll{ padding-bottom:calc(110px + var(--safe-bottom)); }
+.document-scroll{ padding-bottom:calc(40px + var(--safe-bottom)); }
+.welcome-content{ padding-bottom:calc(45px + var(--safe-bottom)); }
+.auth-content{ padding-bottom:calc(24px + var(--safe-bottom)); }
+
+/* Scrolling a screen never drags the whole page; no browser long-press menus or text selection on controls. */
+.home-scroll, .water-scroll, .habits-scroll, .addhabit-scroll, .edithabit-scroll, .goals-scroll,
+.profile-scroll, .document-scroll, .menu-scroll, .stats-scroll, .auth-content{ overscroll-behavior-y:contain; }
+.home-bottom-nav, button, a.home-avatar-btn, a.home-menu-btn, a.menu-item-row, a.back-btn{
+  -webkit-touch-callout:none; -webkit-user-select:none; user-select:none;
+}
+
+/* "Install the app" card on the home screen */
+.install-card{
+  position:relative; display:flex; align-items:center; gap:12px;
+  margin-bottom:16px; padding:14px 40px 14px 16px; border-radius:22px;
+  background:rgba(255,255,255,0.6);
+  backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+  box-shadow:0 4px 16px rgba(26,43,56,0.06);
+}
+.install-card-text{ flex:1; min-width:0; }
+.install-card-text p{ margin:0; font-size:12.5px; line-height:1.45; color:var(--slate); }
+.install-card-text .install-card-title{ margin-bottom:3px; font-size:14.5px; font-weight:800; color:var(--navy); }
+.install-share-icon{ width:15px; height:15px; vertical-align:-2px; color:#2c6b9e; }
+.install-card-close{
+  position:absolute; top:8px; right:8px; width:28px; height:28px; border:none; border-radius:50%;
+  background:transparent; color:var(--slate); cursor:pointer; display:flex; align-items:center; justify-content:center;
+}
+.install-card-close svg{ width:14px; height:14px; }
+
+/* Statistics: weekly charts with values, today highlighted, water goal line */
+.stats-card-hint{ margin:-10px 0 14px; font-size:12.5px; line-height:1.4; color:var(--slate); }
+.wk-chart{ padding-top:20px; }
+.wk-area{ position:relative; height:120px; display:flex; align-items:flex-end; gap:8px; }
+.wk-col{ position:relative; flex:1; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; }
+.wk-value{ margin-bottom:5px; font-size:11px; font-weight:800; color:var(--navy); white-space:nowrap; }
+.wk-bar{ width:70%; max-width:26px; min-height:4px; border-radius:7px; }
+.wk-bar.full{ background:linear-gradient(180deg, #4fd47a, var(--success)); box-shadow:0 4px 10px rgba(47,191,91,0.28); }
+.wk-bar.part{ background:linear-gradient(180deg, #9fd0ca, var(--mint)); }
+.wk-bar.water{ background:linear-gradient(180deg, #a9d3ee, var(--water)); }
+.wk-bar.zero{ height:4px; background:rgba(96,125,142,0.22); }
+.wk-col.today .wk-value{ color:var(--success-deep); }
+.wk-goal{ position:absolute; left:0; right:0; border-top:2px dashed rgba(30,155,69,0.55); z-index:1; pointer-events:none; }
+.stats-card-pill.goal{ color:var(--success-deep); }
+.wk-legend i.goal-line{ width:14px; height:0; border-radius:0; border-top:2px dashed rgba(30,155,69,0.7); }
+.wk-labels{ display:flex; gap:8px; margin-top:8px; }
+.wk-labels span{ flex:1; text-align:center; font-size:11.5px; font-weight:600; color:var(--slate); padding:3px 0; border-radius:9px; }
+.wk-labels span.today{ background:var(--navy); color:#fff; font-weight:800; }
+.wk-labels span.future{ opacity:0.45; }
+.wk-legend{ display:flex; flex-wrap:wrap; gap:6px 14px; margin-top:14px; font-size:12px; color:var(--slate); }
+.wk-legend span{ display:inline-flex; align-items:center; gap:6px; }
+.wk-legend i{ width:10px; height:10px; border-radius:3px; display:inline-block; }
+.wk-legend i.full{ background:var(--success); }
+.wk-legend i.part{ background:var(--mint); }
+.wk-legend i.water{ background:var(--water); }
+.wk-legend i.zero{ background:rgba(96,125,142,0.3); }
+.stats-mini-bar{ height:6px; margin:2px 0 8px; border-radius:4px; background:rgba(96,125,142,0.15); overflow:hidden; }
+.stats-mini-bar span{ display:block; height:100%; border-radius:4px; background:var(--mint); transition:width .4s ease; }
+.stats-mini-bar span.full{ background:var(--success); }
+.stats-water-foot .stats-water-avg b{ color:var(--navy); }
+.stats-water-foot .stats-water-change{ color:var(--success-deep); }
+.stats-water-change.muted{ color:var(--slate); font-weight:600; }
+.stats-water-foot .stats-water-change.negative{ color:#c0392b; }
+
+/* "Done" in juicy green. The check springs in only at the moment of marking (a transition, not an animation),
+   so opening a screen with habits already done doesn't make anything jump. */
+.today-habit-row.done{ background:rgba(47,191,91,0.13); }
+.today-habit-row.done .today-habit-check{
+  background:linear-gradient(135deg, #4fd47a, var(--success)); border-color:transparent;
+  box-shadow:0 4px 12px rgba(47,191,91,0.35);
+}
+.today-habit-check svg{ transform:scale(0.3); transition:opacity .15s ease, transform .35s cubic-bezier(.34,1.8,.5,1); }
+.today-habit-row.done .today-habit-check svg{ transform:scale(1); }
+.today-habit-row.done .today-habit-info h4{ text-decoration:none; color:var(--success-deep); }
+.today-habit-row.done .today-habit-info p{ color:var(--success-deep); opacity:0.75; }
+.today-habit-row.done .today-habit-goal-badge{ color:var(--success-deep); border-color:rgba(47,191,91,0.4); }
+.progress-ring.complete .ring-fg{ stroke:var(--success); }
+.progress-ring.complete .ring-label{ color:var(--success-deep); }
+.water-ring.reached .ring-fg{ stroke:var(--success); }
+.water-ring.reached .water-percent-text{ color:var(--success-deep); }
+.challenge-card.complete .challenge-progress-fill{ background:linear-gradient(90deg, #4fd47a, var(--success)); }
+.challenge-card.complete .challenge-percent{ color:var(--success-deep); }
+
+/* "All habits of the day are done" congratulation */
+.modal-overlay.celebrate.open .modal-card{ animation:celebrate-pop .35s cubic-bezier(.34,1.56,.64,1); }
+.celebrate-icon{
+  width:76px; height:76px; border-radius:50%; margin:0 auto 18px;
+  display:flex; align-items:center; justify-content:center;
+  background:linear-gradient(135deg, #4fd47a, var(--success));
+  box-shadow:0 0 0 10px var(--success-soft), 0 10px 24px rgba(47,191,91,0.35);
+}
+.celebrate-icon svg{ width:38px; height:38px; color:#fff; stroke-width:3; }
+.modal-overlay.celebrate.open .celebrate-icon{ animation:celebrate-check .5s .1s cubic-bezier(.34,1.8,.5,1) both; }
+.modal-overlay.celebrate h3{ font-size:21px; line-height:1.3; }
+.modal-overlay.celebrate p{ font-size:16px; font-weight:700; color:var(--success-deep); }
+.modal-btn-confirm.celebrate-btn{
+  background:linear-gradient(135deg, #4fd47a, var(--success)); box-shadow:0 8px 20px rgba(47,191,91,0.3); font-size:16px;
+}
+@keyframes celebrate-pop{ from{ transform:scale(0.85); opacity:0; } to{ transform:none; opacity:1; } }
+@keyframes celebrate-check{ from{ transform:scale(0.2); } to{ transform:none; } }
+
+/* ---------------- "Install the app" guide (after registration) ---------------- */
+#screen-install{ background:linear-gradient(180deg, #c8d8e8 0%, #d5e1ec 45%, #e2eaf2 100%); }
+.install-scroll{
+  position:relative; z-index:1; flex:1; min-height:0; overflow-y:auto; overscroll-behavior-y:contain;
+  display:flex; flex-direction:column; padding:22px 20px calc(28px + var(--safe-bottom));
+}
+.install-scroll::-webkit-scrollbar{ display:none; }
+.install-scroll h1{ margin:0 0 10px; font-size:26px; line-height:1.2; font-weight:800; color:var(--navy); letter-spacing:-0.01em; }
+.install-lead{ margin:0 0 18px; font-size:14.5px; line-height:1.5; color:var(--slate); }
+.install-platforms{ display:flex; gap:8px; padding:4px; margin-bottom:18px; border-radius:16px; background:rgba(255,255,255,0.45); }
+.install-platform{
+  flex:1; height:40px; border:none; border-radius:12px; cursor:pointer; background:transparent;
+  font-family:inherit; font-size:14.5px; font-weight:700; color:var(--slate);
+}
+.install-platform.active{ background:#fff; color:var(--navy); box-shadow:0 2px 8px rgba(26,43,56,0.08); }
+.install-steps{ list-style:none; margin:0 0 20px; padding:0; display:flex; flex-direction:column; gap:12px; }
+.install-step{
+  display:flex; gap:12px; padding:16px; border-radius:22px;
+  background:rgba(255,255,255,0.55); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+  box-shadow:0 4px 16px rgba(26,43,56,0.05);
+}
+.install-step-num{
+  width:28px; height:28px; flex-shrink:0; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-size:14px; font-weight:800; color:#fff; background:linear-gradient(135deg, var(--blue), var(--mint));
+}
+.install-step-body{ flex:1; min-width:0; }
+.install-step-body h3{ margin:3px 0 4px; font-size:15.5px; line-height:1.3; font-weight:800; color:var(--navy); }
+.install-step-body p{ margin:0 0 12px; font-size:13px; line-height:1.45; color:var(--slate); }
+.install-now-btn, .install-done-btn{
+  width:100%; height:56px; border:none; border-radius:20px; cursor:pointer; flex-shrink:0;
+  font-family:inherit; font-size:16px; font-weight:800; color:#fff;
+}
+.install-now-btn{ margin-bottom:16px; background:linear-gradient(135deg, #4fd47a, var(--success)); box-shadow:0 8px 20px rgba(47,191,91,0.3); }
+.install-done-btn{ margin-top:auto; background:linear-gradient(120deg, var(--blue), var(--mint)); box-shadow:0 8px 20px rgba(108,172,165,0.3); }
+
+/* Mock-ups of phone UI in the guide; the thing to press pulses */
+.mock{ border-radius:16px; background:#fff; box-shadow:0 2px 10px rgba(26,43,56,0.08); font-size:13px; color:var(--navy); }
+.mock-glyph svg, .mock-hit svg{ width:20px; height:20px; display:block; }
+.mock-muted{ color:#9aa9b5; }
+.mock-bar{ display:flex; align-items:center; gap:12px; padding:10px 12px; }
+.mock-bar > .mock-muted:first-child{ font-size:22px; line-height:1; }
+.mock-url{ flex:1; min-width:0; padding:7px 10px; border-radius:10px; background:#eef2f6; color:var(--slate); font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.mock-hit{ position:relative; display:flex; color:#0a7aff; }
+.mock-hit::after, .mock-hit-row::after, .mock-hit-text::after, .mock-home-app.ours::after{
+  content:''; position:absolute; inset:-6px; border-radius:12px; border:2px solid var(--success);
+  animation:mock-pulse 1.6s ease-in-out infinite; pointer-events:none;
+}
+.mock-list{ padding:4px 0; overflow:hidden; }
+.mock-row{ display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-top:1px solid #eef2f6; }
+.mock-row:first-child{ border-top:none; }
+.mock-hit-row{ position:relative; font-weight:700; background:var(--success-soft); }
+.mock-hit-row::after{ inset:2px; border-radius:10px; }
+.mock-dialog{ padding:12px 14px; display:flex; flex-direction:column; gap:12px; }
+.mock-dialog-head{ display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:12px; }
+.mock-dialog-head b{ font-size:12.5px; }
+.mock-dialog-actions{ display:flex; justify-content:flex-end; gap:22px; font-weight:700; }
+.mock-hit-text{ position:relative; color:#0a7aff; font-weight:800; }
+.mock-hit-text::after{ inset:-5px -8px; }
+.mock-app{ display:flex; align-items:center; gap:10px; font-weight:700; }
+.mock-app img, .mock-home-app img{ border-radius:10px; }
+.mock-home{
+  display:grid; grid-template-columns:repeat(4, 44px); justify-content:space-between; gap:12px; padding:14px 16px 22px;
+  background:linear-gradient(135deg, #3a5a78, #6a8fa8);
+}
+.mock-home-app{ position:relative; width:44px; height:44px; border-radius:11px; background:rgba(255,255,255,0.28); }
+.mock-home-app.ours{ background:none; }
+.mock-home-app.ours::after{ inset:-5px; border-radius:15px; border-color:#9ff0b8; }
+.mock-home-app i{ position:absolute; left:50%; top:48px; transform:translateX(-50%); font-style:normal; font-size:10px; color:#fff; white-space:nowrap; }
+@keyframes mock-pulse{ 0%,100%{ opacity:1; transform:scale(1); } 50%{ opacity:0.35; transform:scale(1.06); } }
+.install-card-link{ font-weight:700; color:#2c6b9e; white-space:nowrap; }
+
+/* Today / yesterday switch above the habit list on the home screen */
+.day-switch{ display:flex; gap:6px; padding:4px; margin:-4px 0 12px; border-radius:16px; background:rgba(255,255,255,0.45); }
+.day-switch button{
+  flex:1; height:36px; border:none; border-radius:12px; cursor:pointer; background:transparent;
+  font-family:inherit; font-size:14px; font-weight:700; color:var(--slate);
+}
+.day-switch button.active{ background:#fff; color:var(--navy); box-shadow:0 2px 8px rgba(26,43,56,0.08); }
+.day-switch-hint{ margin:-4px 4px 12px; font-size:12.5px; line-height:1.4; color:var(--slate); }
+.modal-overlay.celebrate .celebrate-goal{ margin:-4px 0 6px; font-size:16px; font-weight:800; color:var(--navy); }
+.modal-overlay.celebrate p + p{ font-size:14.5px; font-weight:600; }
+
+/* Habit history calendar (16 weeks) on the habit screen */
+.heatmap-card{
+  background:rgba(255,255,255,0.5); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+  border-radius:24px; padding:18px 16px; margin-bottom:14px; box-shadow:0 4px 16px rgba(26,43,56,0.05);
+}
+.heatmap-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+.heatmap-head h3{ margin:0; font-size:16px; font-weight:800; color:var(--navy); }
+.heatmap{ display:flex; gap:3px; justify-content:space-between; }
+.heatmap-rows, .heatmap-week{ display:flex; flex-direction:column; gap:3px; }
+.heatmap-rows span{ height:15px; font-size:9.5px; line-height:15px; color:var(--slate); padding-right:2px; }
+.heatmap-rows span:first-child, .heatmap-month{ height:13px; }
+.heatmap-month{ font-size:9.5px; line-height:13px; color:var(--slate); white-space:nowrap; }
+.heatmap-cell{ width:15px; height:15px; border-radius:4px; background:rgba(96,125,142,0.035); }
+.heatmap-cell.done{ background:var(--success); }
+.heatmap-cell.missed{ background:rgba(96,125,142,0.22); }
+.heatmap-cell.pending{ background:rgba(96,125,142,0.1); }
+.heatmap-cell.off{ background:rgba(96,125,142,0.07); }
+.heatmap-cell.today{ box-shadow:0 0 0 2px var(--navy); }
+.heatmap-summary{ margin:12px 0 0; font-size:13px; color:var(--slate); }
+.heatmap-summary b{ color:var(--navy); }
+.wk-legend i.miss{ background:rgba(96,125,142,0.3); }
+.wk-legend i.offday{ background:rgba(96,125,142,0.1); }
+.push-prefs{ display:flex; flex-direction:column; gap:10px; margin-top:12px; padding-left:46px; }
+.push-pref{ display:flex; align-items:flex-start; gap:10px; cursor:pointer; }
+.push-pref input{ width:20px; height:20px; margin:1px 0 0; flex-shrink:0; accent-color:var(--success); }
+.push-pref span{ font-size:12.5px; line-height:1.4; color:var(--slate); }
+.push-pref b{ display:block; font-size:13.5px; color:var(--navy); }
+.menu-cookie-link{ border:none; background:none; padding:4px; cursor:pointer; font-family:inherit; font-size:12px; color:rgba(96,125,142,0.75); text-decoration:underline; }

@@ -2,6 +2,8 @@
 
 import useSWR, { mutate } from 'swr';
 import { api, ApiClientError, fetcher } from '@/lib/client/api';
+import { trackGoal } from '@/lib/client/analytics';
+import { forgetPushOnThisDevice } from '@/lib/client/push';
 import { todayStr } from '@/lib/shared/dates';
 import type { UserDTO } from '@/lib/shared/types';
 import { clearAllData, keys } from './keys';
@@ -27,10 +29,13 @@ const withDate = (url: string) => `${url}?date=${todayStr()}`;
 
 export const authApi = {
   async register(name: string, email: string, password: string) {
-    return api.post<RegisterResult>(withDate('/api/auth/register'), { name, email, password });
+    const result = await api.post<RegisterResult>(withDate('/api/auth/register'), { name, email, password });
+    trackGoal('register');
+    return result;
   },
   async verify(email: string, code: string) {
     const user = await api.post<UserDTO>(withDate('/api/auth/verify'), { email, code });
+    trackGoal('email_confirmed');
     await mutate(keys.me, user, { revalidate: false });
     return user;
   },
@@ -39,6 +44,7 @@ export const authApi = {
   },
   async login(email: string, password: string) {
     const user = await api.post<UserDTO>('/api/auth/login', { email, password });
+    trackGoal('login');
     await mutate(keys.me, user, { revalidate: false });
     return user;
   },
@@ -54,6 +60,7 @@ export const authApi = {
   },
   async logout() {
     await api.post('/api/auth/logout');
+    await forgetPushOnThisDevice();
     await clearAllData();
   },
 };

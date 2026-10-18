@@ -2,7 +2,6 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { BottomNav } from '@/components/BottomNav';
 import { EMPTY_HABIT_FORM, formToHabitInput, HabitForm, type HabitFormValue } from '@/components/HabitForm';
 import { ScreenBackground } from '@/components/ScreenBackground';
 import { ScreenHeader } from '@/components/ScreenHeader';
@@ -61,7 +60,6 @@ export default function NewHabitPage() {
           {busy ? 'Создаём…' : 'Создать привычку'}
         </button>
       </div>
-      <BottomNav />
     </section>
   );
 }

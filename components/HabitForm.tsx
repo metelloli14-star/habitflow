@@ -3,7 +3,7 @@
 import { CATEGORIES, DEFAULT_GOAL_COUNT, FREQUENCIES } from '@/lib/shared/constants';
 import { isValidDateStr } from '@/lib/shared/dates';
 import type { Category, Frequency, HabitDTO, HabitInput } from '@/lib/shared/types';
-import { requestReminderPermission } from '@/lib/hooks';
+import { requestReminderPermission, usePush, type PushStatus } from '@/lib/hooks';
 import { DaysPicker } from './DaysPicker';
 import { PillGroup } from './PillGroup';
 
@@ -67,7 +67,17 @@ interface Props {
   onTextCommit?: () => void;
 }
 
+/** Under the reminder time: what to do so that the reminder also comes with the app closed. */
+const REMINDER_HINT: Partial<Record<PushStatus, string>> = {
+  off: 'Чтобы напоминание пришло, когда приложение закрыто, разрешите уведомления (Личный кабинет → Уведомления)',
+  denied: 'Уведомления запрещены в настройках — напоминание покажется только в открытом приложении',
+  'ios-install': 'На iPhone напоминание придёт, если добавить приложение на экран «Домой» — подробнее в личном кабинете',
+  'ios-update': 'Напоминание покажется только в открытом приложении: для уведомлений нужен iOS 16.4 или новее',
+  unsupported: 'Напоминание покажется только в открытом приложении',
+};
+
 export function HabitForm({ value, today, titleError, onChange, onTextCommit }: Props) {
+  const push = usePush();
   const set = <K extends keyof HabitFormValue>(key: K, v: HabitFormValue[K], commit: boolean) =>
     onChange({ ...value, [key]: v }, commit);
 
@@ -117,10 +127,15 @@ export function HabitForm({ value, today, titleError, onChange, onTextCommit }: 
           type="time"
           value={value.reminderTime}
           onChange={(e) => {
-            if (e.target.value) requestReminderPermission();
+            // Asked right when the time is chosen; without push, notifications still work while the app is open.
+            if (e.target.value) {
+              if (push.status === 'off') void push.enable();
+              else if (push.status !== 'on') requestReminderPermission();
+            }
             set('reminderTime', e.target.value, true);
           }}
         />
+        {value.reminderTime && REMINDER_HINT[push.status] && <p className="addhabit-hint">{REMINDER_HINT[push.status]}</p>}
       </div>
 
       <div className="addhabit-field">

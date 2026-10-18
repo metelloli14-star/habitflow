@@ -5,26 +5,38 @@ import type { UserRecord } from '@/db/schema';
 import { SESSION_COOKIE } from '@/lib/shared/constants';
 import type { UserDTO } from '@/lib/shared/types';
 import { ApiError } from './http';
+import { avatarUrl } from './services/avatar';
 
-const SESSION_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
+export const SESSION_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 
-export async function getCurrentUser(): Promise<UserRecord | null> {
+/** Sessions created before this moment have expired. */
+export const sessionCutoff = (now = Date.now()) => new Date(now - SESSION_MAX_AGE * 1000);
+
+export async function getCurrentSession(): Promise<{ sessionId: string; user: UserRecord } | null> {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!token || !isUuid(token)) return null;
   const session = await prisma.session.findUnique({ where: { id: token }, include: { user: true } });
   if (!session) return null;
   // Sessions expire on the server too, not only in the browser.
-  if (Date.now() - session.createdAt.getTime() > SESSION_MAX_AGE * 1000) {
+  if (session.createdAt < sessionCutoff()) {
     await prisma.session.deleteMany({ where: { id: session.id } });
     return null;
   }
-  return toUserRecord(session.user);
+  return { sessionId: session.id, user: toUserRecord(session.user) };
+}
+
+export async function getCurrentUser(): Promise<UserRecord | null> {
+  return (await getCurrentSession())?.user ?? null;
+}
+
+export async function requireSession(): Promise<{ sessionId: string; user: UserRecord }> {
+  const current = await getCurrentSession();
+  if (!current) throw new ApiError(401, 'Войдите в аккаунт, чтобы продолжить', 'unauthorized');
+  return current;
 }
 
 export async function requireUser(): Promise<UserRecord> {
-  const user = await getCurrentUser();
-  if (!user) throw new ApiError(401, 'Войдите в аккаунт, чтобы продолжить', 'unauthorized');
-  return user;
+  return (await requireSession()).user;
 }
 
 export async function startSession(userId: string): Promise<void> {
@@ -52,10 +64,12 @@ export function toUserDTO(user: UserRecord): UserDTO {
     name: user.name,
     email: user.email,
     gender: user.gender,
-    avatar: user.avatar,
+    avatar: avatarUrl(user.avatarVersion),
     waterGoal: user.waterGoal,
     pendingEmail: user.pendingEmail ?? null,
     vkLinked: !!user.vkId,
     hasPassword: !!user.passwordHash,
+    waterReminders: user.waterReminders,
+    weeklySummary: user.weeklySummary,
   };
 }

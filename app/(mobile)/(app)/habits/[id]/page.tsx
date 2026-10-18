@@ -3,8 +3,8 @@
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
-import { BottomNav } from '@/components/BottomNav';
 import { formToHabitInput, HabitForm, habitToForm, type HabitFormValue } from '@/components/HabitForm';
+import { HabitHeatmap } from '@/components/HabitHeatmap';
 import { ConfirmModal } from '@/components/Modals';
 import { ScreenBackground } from '@/components/ScreenBackground';
 import { ScreenHeader } from '@/components/ScreenHeader';
@@ -97,6 +97,8 @@ export default function EditHabitPage() {
               )}
             </div>
 
+            {habit && <HabitHeatmap habit={habit} today={today} />}
+
             <Link href="/stats" className="edithabit-stats-btn" style={{ display: 'block', textAlign: 'center', textDecoration: 'none' }}>
               Перейти в статистику
             </Link>
@@ -104,7 +106,6 @@ export default function EditHabitPage() {
           </>
         )}
       </div>
-      <BottomNav />
       <ConfirmModal
         open={confirmOpen}
         title="Удалить привычку?"

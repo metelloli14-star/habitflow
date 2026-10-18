@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { BottomNav } from '@/components/BottomNav';
 import { ScreenBackground } from '@/components/ScreenBackground';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { StatusBar } from '@/components/StatusBar';
@@ -48,7 +47,7 @@ export default function GoalsPage() {
               const done = Math.min(h.progressDone, goal.targetCount);
               const pct = Math.round((done / goal.targetCount) * 100);
               return (
-                <Link key={h.id} href={`/habits/${h.id}`} className="challenge-card" style={{ display: 'block', color: 'inherit', textDecoration: 'none' }}>
+                <Link key={h.id} href={`/habits/${h.id}`} className={'challenge-card' + (pct >= 100 ? ' complete' : '')} style={{ display: 'block', color: 'inherit', textDecoration: 'none' }}>
                   <span className="challenge-badge">Цель привычки «{h.title}»</span>
                   <h2>{goal.title}</h2>
                   {goal.description && <p className="challenge-desc">{goal.description}</p>}
@@ -66,7 +65,6 @@ export default function GoalsPage() {
           )}
         </div>
       </div>
-      <BottomNav />
     </section>
   );
 }

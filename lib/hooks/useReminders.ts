@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { isPushMarkedOn } from '@/lib/client/push';
 import { isHabitScheduledOn, todayStr } from '@/lib/shared/dates';
 import type { HabitDTO } from '@/lib/shared/types';
 
@@ -26,9 +27,9 @@ export function requestReminderPermission() {
 
 /**
  * Watches habits with a reminder time. When it's time (or within 30 min after, e.g. the app was just opened)
- * and the habit isn't done yet, returns it as `due` and shows a system notification if allowed.
- * Each habit reminds at most once per day. Works while the app is open, including in a background tab;
- * reminders with the app fully closed will need a service worker + push server.
+ * and the habit isn't done yet, returns it as `due` for the in-app banner. Each habit reminds at most once per day.
+ * A system notification is shown here only when this device has no push subscription: with push on,
+ * the server sends it (even with the app closed — see lib/server/services/reminders.ts).
  */
 export function useReminders(habits: HabitDTO[]) {
   const [due, setDue] = useState<HabitDTO | null>(null);
@@ -46,7 +47,7 @@ export function useReminders(habits: HabitDTO[]) {
       sent[h.id] = today;
       localStorage.setItem(SENT_KEY, JSON.stringify(sent));
       try {
-        if ('Notification' in window && Notification.permission === 'granted') {
+        if (!isPushMarkedOn() && 'Notification' in window && Notification.permission === 'granted') {
           new Notification('Привычка', { body: `Пора: ${h.title}` });
         }
       } catch {

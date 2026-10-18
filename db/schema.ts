@@ -10,7 +10,8 @@ export interface UserRecord {
   /** '' for accounts created through VK ID that haven't set a password yet. */
   passwordHash: string;
   gender: Gender;
-  avatar: string | null;
+  /** Version of the profile photo (part of its URL); null — no photo. The photo itself is in the avatars table. */
+  avatarVersion: string | null;
   waterGoal: number;
   emailVerified: boolean;
   /** Active one-time codes, one per purpose (see lib/server/services/codes.ts). */
@@ -25,6 +26,12 @@ export interface UserRecord {
   lockedUntil?: string | null;
   /** First calendar day the person used the app (YYYY-MM-DD) — used for fair monthly averages. */
   firstUseDate: string;
+  /** IANA time zone of their device (e.g. 'Europe/Moscow'); push reminders follow it. */
+  timeZone: string;
+  /** Push "time to drink water" every 2 hours in the daytime. */
+  waterReminders: boolean;
+  /** Push with the week's results on Sunday evening. */
+  weeklySummary: boolean;
   createdAt: string;
 }
 

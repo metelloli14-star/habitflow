@@ -1,6 +1,7 @@
 'use client';
 
 import useSWR, { mutate as globalMutate } from 'swr';
+import { trackGoal } from '@/lib/client/analytics';
 import { api, fetcher } from '@/lib/client/api';
 import { currentTimeHHMM } from '@/lib/shared/dates';
 import type { UserDTO, WaterDayDTO } from '@/lib/shared/types';
@@ -14,6 +15,7 @@ export function useWater() {
 
   const addWater = async (amount: number) => {
     if (!today) return;
+    trackGoal('water_added', { ml: amount });
     if (data) {
       // Show the new amount immediately; the server response replaces it a moment later.
       const total = data.amount + amount;

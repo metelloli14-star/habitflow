@@ -215,6 +215,9 @@ sudo chmod 600 /opt/habitflow/.env.local
 | `MAIL_FROM` | `"Привычка <no-reply@poleznyeprivychki.ru>"` |
 | `VK_ID_CLIENT_ID` | ID приложения VK ID; пусто — кнопка VK скрыта |
 | `VK_ID_REDIRECT_URI` | `https://poleznyeprivychki.ru/api/auth/vk/callback` |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | ключи push-уведомлений — создаются в шаге 6.1 |
+| `VAPID_SUBJECT` | `mailto:no-reply@poleznyeprivychki.ru` — контакт для push-сервисов Google и Apple |
+| `NEXT_PUBLIC_YANDEX_METRIKA_ID` | номер счётчика Яндекс Метрики (по желанию). Задаётся **до** `npm run build`; после изменения — пересобрать. Пусто — аналитики и баннера о cookie нет |
 
 `NODE_ENV` в этот файл не пишите — он задаётся в службе systemd (шаг 7).
 Файл читают и Next.js, и Prisma CLI (через `prisma.config.ts`). После любых изменений в нём перезапустите
@@ -230,6 +233,7 @@ sudo -u habitflow npm run build
 ```
 
 - `npm install` ставит зависимости и генерирует клиент Prisma (`db/generated`). Предупреждения `npm warn` не страшны.
+  После него создайте ключи push-уведомлений (шаг 6.1) — до сборки и запуска.
 - `npm run db:deploy` (= `prisma migrate deploy`) создаёт таблицы по миграциям из `prisma/migrations`.
   В конце должно быть `All migrations have been successfully applied`.
 - `npm run build` собирает приложение; успешная сборка заканчивается таблицей со списком страниц.
@@ -242,11 +246,39 @@ sudo -u postgres psql -d habitflow -c '\dt'
 
 Должны быть `users`, `sessions`, `habits`, `completions`, `water_entries` и служебная `_prisma_migrations`.
 
+### 6.1. Ключи push-уведомлений
+
+Напоминания приходят на телефон даже при закрытом приложении через Web Push. Для этого серверу нужна пара ключей VAPID.
+Создайте её **один раз**:
+
+```bash
+sudo -u habitflow npm run push:keys
+```
+
+Скопируйте `Public Key` и `Private Key` в `.env.local` (шаг 5):
+
+```
+VAPID_PUBLIC_KEY=BL...длинная строка...
+VAPID_PRIVATE_KEY=...строка покороче...
+VAPID_SUBJECT=mailto:no-reply@poleznyeprivychki.ru
+```
+
+Ключи не меняйте и храните в резервной копии вместе с `.env.local`: с новыми ключами все подписки перестанут
+работать, и каждому пользователю придётся включить уведомления заново. Приватный ключ никому не передавайте.
+Без ключей приложение работает, но напоминания видны только в открытом приложении.
+
 > **Никогда не запускайте на сервере** `npm run db:seed` (создаст демо-аккаунт с общеизвестным паролем
 > `demo12345`), `npm run db:reset` (удалит все данные) и `npm run db:migrate` (команда для разработки).
 > На сервере — только `npm run db:deploy`.
 
 ## Шаг 7. Служба systemd
+
+Сначала убедитесь, что порт 3000 свободен (пустой вывод — свободен). Если на сервере уже работает другой сайт
+на 3000, возьмите другой порт — см. [«Другой порт вместо 3000»](#другой-порт-вместо-3000):
+
+```bash
+sudo ss -ltnp | grep ':3000 '
+```
 
 Создайте файл службы:
 
@@ -292,7 +324,8 @@ curl -s http://127.0.0.1:3000/api/auth/me
 ```
 
 Первая команда вернёт `{"vk":"live"}` или `{"vk":"off"}`, вторая — `{"error":"Войдите в аккаунт…"}`:
-это нормально, значит запрос дошёл до базы и сессии не нашлось.
+это нормально, значит запрос дошёл до базы и сессии не нашлось. Если вместо JSON пришла HTML-страница
+(например, 404 чужого сайта), на этом порту отвечает другое приложение.
 
 Запускайте **один** экземпляр приложения: счётчики защиты от перебора хранятся в памяти процесса.
 
@@ -331,12 +364,18 @@ server {
 Две строки `proxy_redirect` обязательны: без них редирект на экран входа (`/home` → `/welcome`) и возврат
 из VK ID уводят браузер на `https://localhost:3000/…`.
 
-Включите сайт и отключите стандартную заглушку nginx:
+Включите сайт:
 
 ```bash
 sudo ln -s /etc/nginx/sites-available/habitflow /etc/nginx/sites-enabled/
-sudo rm /etc/nginx/sites-enabled/default
 sudo nginx -t && sudo systemctl reload nginx
+```
+
+Стандартную заглушку nginx (`/etc/nginx/sites-enabled/default`) удаляйте, **только если на сервере нет других
+сайтов**: на общем сервере в ней может быть настроен соседний сайт. Проверить:
+
+```bash
+grep -n "server_name\|proxy_pass" /etc/nginx/sites-enabled/default
 ```
 
 ### Другой порт вместо 3000
@@ -399,6 +438,13 @@ curl -sI https://poleznyeprivychki.ru/home | grep -i location
    ```bash
    sudo -u postgres psql -d habitflow -c "SELECT email, email_verified, created_at FROM users;"
    ```
+6. Push-напоминание на телефоне:
+   - **Android:** откройте сайт в Chrome или Яндекс Браузере, войдите, «Личный кабинет» → «Уведомления» → «Включить» → «Разрешить».
+   - **iPhone (iOS 16.4+):** сначала Safari → «Поделиться» → «На экран „Домой“», откройте приложение с иконки,
+     войдите и включите уведомления в личном кабинете.
+   - Создайте привычку с напоминанием на 2–3 минуты вперёд и **закройте приложение**. В назначенное время придёт
+     уведомление «Пора: …», а в логах появится строка `[push] reminders sent: 1`.
+   - При запуске в логах должна быть строка `[push] reminder scheduler started` — без приписки про ключи VAPID.
 
 Логи приложения:
 
@@ -488,13 +534,25 @@ sudo systemctl start habitflow
 sudo /usr/local/bin/habitflow-backup
 cd /opt/habitflow
 sudo -u habitflow git pull
-sudo -u habitflow npm install
+sudo -u habitflow npm ci
+sudo -u habitflow npm test
 sudo -u habitflow npm run db:deploy
 sudo -u habitflow npm run build
 sudo systemctl restart habitflow
 ```
 
+- `npm ci` ставит ровно те версии пакетов, что записаны в `package-lock.json` (как в CI).
+- `npm test` — ~5 секунд: проверяет логику и работу с базой на собственной временной базе в памяти, рабочую не трогает.
+  Если тест упал — не продолжайте, сайт продолжит работать на старой версии. Удобнее смотреть результат проверки
+  каждого коммита на GitHub (вкладка Actions) ещё до обновления сервера.
+
 - Резервная копия перед обновлением — обязательно: миграции не откатываются сами.
+- **Обновление с фото профиля в отдельной таблице** (миграция `avatar_files`): уже загруженные фото переносятся
+  автоматически, ничего делать не нужно. Миграция `water_and_weekly_push` добавляет настройки уведомлений о воде и
+  итогах недели (по умолчанию включены у тех, кто включил push).
+- **Обновление до версии с push-напоминаниями:** миграция `push_notifications` применится командой `db:deploy`
+  (добавляет таблицы подписок и отправленных напоминаний, существующие данные не меняются). Перед перезапуском
+  создайте ключи VAPID (шаг 6.1) и пересоберите приложение.
 - `db:deploy` применяет только новые миграции из `prisma/migrations`; если их нет — ничего не делает.
 - Во время сборки (1–2 минуты) сайт может отвечать ошибками — обновляйтесь, когда пользователей мало.
 - Откат: `sudo -u habitflow git checkout <предыдущий коммит>`, затем `npm install`, `npm run build`,
@@ -532,6 +590,8 @@ sudo systemctl restart habitflow
 | Симптом | Причина и решение |
 |---|---|
 | `502 Bad Gateway` | Приложение не запущено: `sudo systemctl status habitflow`, причина — в `sudo journalctl -u habitflow -n 100` |
+| `curl` на порт приложения возвращает HTML-страницу (404 чужого сайта), в логах `EADDRINUSE` | Порт занят другим приложением — см. «Другой порт вместо 3000» (шаг 8) |
+| В логах `status=200/CHDIR` или `Permission denied` | Служба не может зайти в папку проекта: путь в `WorkingDirectory`/`ExecStart` не совпадает с реальным или папка лежит в `/root`, куда нет доступа пользователю `habitflow` |
 | В логах `Can't reach database server`, `ECONNREFUSED 127.0.0.1:5432` | PostgreSQL не запущен или другой порт: `sudo systemctl status postgresql`, проверьте `DATABASE_URL` |
 | `password authentication failed for user "habitflow"` | Пароль в `DATABASE_URL` не совпадает с паролем роли или содержит спецсимволы. Задайте новый (шаг 3.2–3.3) и перезапустите службу |
 | `The table public.users does not exist` | Не применены миграции: `sudo -u habitflow npm run db:deploy` |
@@ -543,6 +603,10 @@ sudo systemctl restart habitflow
 | «Отправка писем временно недоступна» | Не заполнены `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS` в `.env.local`; после правки — `sudo systemctl restart habitflow` |
 | «Не удалось отправить письмо» | Неверный пароль приложения или порт SMTP: подробности в `sudo journalctl -u habitflow \| grep mail` |
 | Письма уходят в спам | Не добавлены SPF и DKIM в DNS домена |
+| В личном кабинете «Уведомления: пока не настроены на сервере» | Нет `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` в `.env.local` или приложение не перезапущено после их добавления (шаг 6.1) |
+| На iPhone нет кнопки «Включить» | Приложение открыто во вкладке Safari: добавьте его на экран «Домой» и откройте с иконки. Нужен iOS 16.4+ |
+| Уведомления не приходят | Проверьте логи: `sudo journalctl -u habitflow \| grep push`. Напоминание не отправляется, если привычка уже отмечена сегодня или не запланирована на этот день. На Android проверьте, что для браузера не включена экономия заряда |
+| В логах `[push] sending failed: 401` или `403` | Ключи VAPID поменялись после подписки устройств или `VAPID_SUBJECT` пустой — верните прежние ключи или попросите пользователей включить уведомления заново |
 | Нет кнопки «Войти с VK ID» | Не заданы `VK_ID_CLIENT_ID` и `VK_ID_REDIRECT_URI` |
 | «Слишком много запросов» сразу у всех пользователей | nginx не передаёт `X-Real-IP`, и все запросы считаются с одного адреса — проверьте `proxy_set_header` (шаг 8) |
 | `413 Request Entity Too Large` при загрузке фото | Нет `client_max_body_size 2m;` в конфиге nginx |

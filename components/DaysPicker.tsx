@@ -1,6 +1,6 @@
 'use client';
 
-import { daysInMonth, formatMonthTitle, WEEKDAYS } from '@/lib/shared/dates';
+import { daysInMonth, WEEKDAYS } from '@/lib/shared/dates';
 import type { Frequency } from '@/lib/shared/types';
 
 interface Props {
@@ -12,10 +12,10 @@ interface Props {
 }
 
 /**
- * "Дни повторения":
- * - daily: all 7 weekdays shown as selected, not clickable;
- * - weekly: pick weekdays;
- * - monthly: pick dates of the current month.
+ * Days of the habit:
+ * - every day: all 7 weekdays shown as selected, not clickable;
+ * - days of the week: pick weekdays (e.g. Mon, Wed, Fri);
+ * - dates of the month: pick dates, repeated every month.
  */
 export function DaysPicker({ frequency, days, onChange, today }: Props) {
   const toggle = (d: string) => onChange(days.includes(d) ? days.filter((x) => x !== d) : [...days, d]);
@@ -24,7 +24,7 @@ export function DaysPicker({ frequency, days, onChange, today }: Props) {
     const count = daysInMonth(today);
     return (
       <div className="addhabit-field">
-        <label>Дни повторения — {formatMonthTitle(today)}</label>
+        <label>Выберите числа — повторяется каждый месяц</label>
         <div className="addhabit-days-row month-mode">
           {Array.from({ length: count }, (_, i) => String(i + 1)).map((d) => (
             <button
@@ -45,7 +45,7 @@ export function DaysPicker({ frequency, days, onChange, today }: Props) {
   const daily = frequency === 'Ежедневно';
   return (
     <div className="addhabit-field">
-      <label>Дни повторения</label>
+      <label>{daily ? 'Дни повторения' : 'Выберите дни недели'}</label>
       <div className="addhabit-days-row">
         {WEEKDAYS.map((d) => {
           const active = daily || days.includes(d);

@@ -4,10 +4,11 @@ export const SESSION_COOKIE = 'hf_session';
 
 export const CATEGORIES: Category[] = ['Здоровье', 'Хобби', 'Разум'];
 
+// The stored values stay the same; only what people see changed.
 export const FREQUENCIES: { value: Frequency; label: string }[] = [
   { value: 'Ежедневно', label: 'Каждый день' },
-  { value: 'Еженедельно', label: 'По неделям' },
-  { value: 'Ежемесячно', label: 'По месяцам' },
+  { value: 'Еженедельно', label: 'Дни недели' },
+  { value: 'Ежемесячно', label: 'Числа месяца' },
 ];
 
 export const WATER_GOAL_OPTIONS = [1500, 2000, 2500, 3000];

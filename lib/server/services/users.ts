@@ -14,7 +14,6 @@ export const LOGIN_LOCK_MS = 15 * 60 * 1000; // …block login for 15 minutes
 
 export const NEW_USER_DEFAULTS = {
   gender: '' as const,
-  avatar: null,
   waterGoal: DEFAULT_WATER_GOAL,
 };
 
@@ -113,7 +112,7 @@ export async function requestEmailChange(user: UserRecord, newEmail: string, now
   return code;
 }
 
-export function resendEmailChange(user: UserRecord, now = Date.now()): Promise<string> {
+export async function resendEmailChange(user: UserRecord, now = Date.now()): Promise<string> {
   if (!user.pendingEmail) throw new ApiError(400, 'Нет нового email, ожидающего подтверждения', 'nothing_to_confirm');
   return issueCode(user, 'email', user.pendingEmail, now);
 }
@@ -168,7 +167,7 @@ export async function linkVk(user: UserRecord, profile: VkProfile): Promise<User
 }
 
 /** Unlinking is only allowed when the person can still log in another way. */
-export function unlinkVk(user: UserRecord): Promise<UserRecord> {
+export async function unlinkVk(user: UserRecord): Promise<UserRecord> {
   if (!user.email || !user.passwordHash) {
     throw new ApiError(400,
       'Сначала задайте email и пароль (email — в личном кабинете, пароль — через «Забыли пароль?»), иначе после отвязки войти будет нельзя',

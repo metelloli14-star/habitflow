@@ -11,36 +11,73 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(uuid()) @db.Uuid
-  name          String
+  id             String    @id @default(uuid()) @db.Uuid
+  name           String
   /// В нижнем регистре. NULL — у аккаунта VK ID, которому VK не передал email.
-  email         String?   @unique
+  email          String?   @unique
   /// Пустая строка — у аккаунта VK ID, которому ещё не задали пароль.
-  passwordHash  String    @default("") @map("password_hash")
+  passwordHash   String    @default("") @map("password_hash")
   /// 'Мужской' | 'Женский' | ''
-  gender        String    @default("")
-  /// Фото профиля: data URL (JPEG/PNG/WebP) до ~400 КБ.
-  avatar        String?
-  waterGoal     Int       @default(2000) @map("water_goal")
-  emailVerified Boolean   @default(false) @map("email_verified")
+  gender         String    @default("")
+  /// Версия фото профиля: меняется с каждым новым фото и входит в его адрес, поэтому браузер кэширует фото навсегда.
+  /// NULL — фото нет. Само фото — в таблице avatars.
+  avatarVersion  String?   @map("avatar_version")
+  waterGoal      Int       @default(2000) @map("water_goal")
+  emailVerified  Boolean   @default(false) @map("email_verified")
   /// Активные одноразовые коды по назначению (см. lib/server/services/codes.ts).
-  codes         Json      @default("{}")
+  codes          Json      @default("{}")
   /// Новый email, ожидающий подтверждения кодом; текущий email работает до подтверждения.
-  pendingEmail  String?   @map("pending_email")
-  vkId          String?   @unique @map("vk_id")
+  pendingEmail   String?   @map("pending_email")
+  vkId           String?   @unique @map("vk_id")
   /// Неверных паролей подряд; сбрасывается при успешном входе.
-  loginFailures Int       @default(0) @map("login_failures")
-  lockedUntil   DateTime? @map("locked_until") @db.Timestamptz(3)
+  loginFailures  Int       @default(0) @map("login_failures")
+  lockedUntil    DateTime? @map("locked_until") @db.Timestamptz(3)
   /// Первый день использования — для честного среднего за месяц.
-  firstUseDate  DateTime  @map("first_use_date") @db.Date
-  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  firstUseDate   DateTime  @map("first_use_date") @db.Date
+  /// Часовой пояс устройства (IANA, например Europe/Moscow) — по нему сервер отправляет напоминания.
+  timeZone       String    @default("Europe/Moscow") @map("time_zone")
+  /// Push «Пора выпить воды» каждые 2 часа с 10 до 20, пока дневная норма не выполнена.
+  waterReminders Boolean   @default(true) @map("water_reminders")
+  /// Push с итогами недели по воскресеньям в 20:00.
+  weeklySummary  Boolean   @default(true) @map("weekly_summary")
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
 
-  sessions     Session[]
-  habits       Habit[]
-  completions  Completion[]
-  waterEntries WaterEntry[]
+  sessions          Session[]
+  habits            Habit[]
+  completions       Completion[]
+  waterEntries      WaterEntry[]
+  avatar            Avatar?
+  sentNotifications SentNotification[]
 
   @@map("users")
+}
+
+/// Отправленные push о воде и итогах недели: одна строка = это уведомление пользователю за этот день уже ушло.
+model SentNotification {
+  userId String   @map("user_id") @db.Uuid
+  /// 'water-14' — напоминание о воде в 14:00, 'weekly' — итоги недели.
+  key    String
+  /// Локальный день пользователя.
+  date   DateTime @db.Date
+  sentAt DateTime @default(now()) @map("sent_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, key, date])
+  @@map("sent_notifications")
+}
+
+/// Фото профиля (маленький JPEG/PNG/WebP), отдаётся по адресу /api/profile/avatar?v=<версия>.
+/// Отдельная таблица: фото не тянется при каждом запросе пользователя и попадает в резервные копии вместе с базой.
+model Avatar {
+  userId    String   @id @map("user_id") @db.Uuid
+  mimeType  String   @map("mime_type")
+  data      Bytes
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("avatars")
 }
 
 /// Сессия входа: id — токен из httpOnly-cookie. Живёт 30 дней от createdAt.
@@ -49,10 +86,28 @@ model Session {
   userId    String   @map("user_id") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pushSubscriptions PushSubscription[]
 
   @@index([userId])
   @@map("sessions")
+}
+
+/// Подписка устройства на push-уведомления. Привязана к сессии: после выхода из аккаунта
+/// (или сброса пароля) сессия удаляется — и напоминания на это устройство больше не приходят.
+model PushSubscription {
+  id        String   @id @default(uuid()) @db.Uuid
+  sessionId String   @map("session_id") @db.Uuid
+  /// Адрес push-сервиса браузера (Google, Apple, Mozilla…), уникален для устройства.
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@map("push_subscriptions")
 }
 
 model Habit {
@@ -71,11 +126,26 @@ model Habit {
   goal         Json?
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  completions Completion[]
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  completions   Completion[]
+  sentReminders SentReminder[]
 
   @@index([userId])
   @@map("habits")
+}
+
+/// Отправленные push-напоминания: одна строка = напоминание о привычке за этот день уже ушло.
+/// Первичный ключ (habit_id, date) гарантирует одну отправку даже после перезапуска сервера.
+model SentReminder {
+  habitId String   @map("habit_id") @db.Uuid
+  /// Локальный день пользователя.
+  date    DateTime @db.Date
+  sentAt  DateTime @default(now()) @map("sent_at") @db.Timestamptz(3)
+
+  habit Habit @relation(fields: [habitId], references: [id], onDelete: Cascade)
+
+  @@id([habitId, date])
+  @@map("sent_reminders")
 }
 
 /// Журнал выполнения: одна строка = привычка выполнена в этот день (локальный день пользователя).

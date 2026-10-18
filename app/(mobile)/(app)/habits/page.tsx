@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { BottomNav } from '@/components/BottomNav';
 import { PillGroup } from '@/components/PillGroup';
 import { ScreenBackground } from '@/components/ScreenBackground';
 import { ScreenHeader } from '@/components/ScreenHeader';
@@ -10,6 +9,7 @@ import { StatusBar } from '@/components/StatusBar';
 import { PencilIcon, PlusIcon } from '@/components/icons';
 import { useHabits } from '@/lib/hooks';
 import { CATEGORIES } from '@/lib/shared/constants';
+import { scheduleLabel } from '@/lib/shared/dates';
 import type { Category } from '@/lib/shared/types';
 
 type Filter = 'all' | Category;
@@ -44,7 +44,7 @@ export default function HabitsPage() {
               <div key={h.id} className="habit-row-card">
                 <div className="habit-row-info">
                   <h3>{h.title}</h3>
-                  <p>{h.category} • {h.frequency}{h.streak > 1 ? ` • серия ${h.streak}` : ''}</p>
+                  <p>{h.category} • {scheduleLabel(h)}{h.streak > 1 ? ` • серия ${h.streak}` : ''}</p>
                 </div>
                 <Link href={`/habits/${h.id}`} className="habit-edit-btn" aria-label={`Редактировать «${h.title}»`}>
                   <PencilIcon />
@@ -59,7 +59,6 @@ export default function HabitsPage() {
           Добавить новую привычку
         </Link>
       </div>
-      <BottomNav />
     </section>
   );
 }

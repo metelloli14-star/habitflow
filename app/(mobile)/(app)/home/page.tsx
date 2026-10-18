@@ -1,13 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { BottomNav } from '@/components/BottomNav';
+import { useState } from 'react';
+import { InstallBanner } from '@/components/InstallBanner';
 import { ScreenBackground } from '@/components/ScreenBackground';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { StatusBar } from '@/components/StatusBar';
 import { CheckIcon, DropIcon, TargetIcon } from '@/components/icons';
 import { useHabits, useSession, useWater } from '@/lib/hooks';
-import { formatDayHeading, isHabitScheduledOn } from '@/lib/shared/dates';
+import { addDays, formatDayHeading, isHabitScheduledOn, scheduleLabel, toDateStr } from '@/lib/shared/dates';
 
 const RING_CIRCUMFERENCE = 169.6; // 2π · r(27)
 
@@ -22,6 +23,15 @@ export default function HomePage() {
   const { user } = useSession();
   const { habits, isLoading, toggleHabit, today } = useHabits();
   const { day: water, addWater } = useWater();
+  // "Вчера": mark what was forgotten yesterday evening, so the streak isn't lost.
+  const [onYesterday, setOnYesterday] = useState(false);
+  const yesterday = today ? addDays(today, -1) : null;
+  const yesterdayList = useHabits(onYesterday && yesterday ? yesterday : undefined);
+  const list = onYesterday ? yesterdayList : { habits, isLoading, toggleHabit };
+  const listDay = onYesterday ? yesterday : today;
+  const listed = listDay
+    ? list.habits.filter((h) => isHabitScheduledOn(h, listDay) && toDateStr(new Date(h.createdAt)) <= listDay)
+    : [];
 
   const todays = today ? habits.filter((h) => isHabitScheduledOn(h, today)) : [];
   const done = todays.filter((h) => h.doneToday).length;
@@ -49,8 +59,10 @@ export default function HomePage() {
           subtitle={today ? formatDayHeading(today) : '\u00a0'}
         />
 
+        <InstallBanner />
+
         <div className="home-card progress-card">
-          <div className="progress-ring">
+          <div className={'progress-ring' + (pct === 100 ? ' complete' : '')}>
             <svg viewBox="0 0 64 64">
               <circle className="ring-bg" cx="32" cy="32" r="27" />
               <circle className="ring-fg" cx="32" cy="32" r="27" strokeDasharray={RING_CIRCUMFERENCE}
@@ -74,11 +86,19 @@ export default function HomePage() {
         </div>
 
         <div className="habits-section-head">
-          <h2>Сегодняшние привычки</h2>
+          <h2>{onYesterday ? 'Вчерашние привычки' : 'Сегодняшние привычки'}</h2>
           <Link href="/habits" className="habits-all-link">Все ({habits.length})</Link>
         </div>
 
-        {isLoading ? (
+        {habits.length > 0 && (
+          <div className="day-switch" role="tablist" aria-label="День">
+            <button type="button" role="tab" aria-selected={!onYesterday} className={onYesterday ? '' : 'active'} onClick={() => setOnYesterday(false)}>Сегодня</button>
+            <button type="button" role="tab" aria-selected={onYesterday} className={onYesterday ? 'active' : ''} onClick={() => setOnYesterday(true)}>Вчера</button>
+          </div>
+        )}
+        {onYesterday && <p className="day-switch-hint">Забыли отметить вчера? Отметьте сейчас — серия сохранится.</p>}
+
+        {list.isLoading ? (
           <div className="screen-loading">Загружаем привычки…</div>
         ) : habits.length === 0 ? (
           <div className="habits-empty-card">
@@ -87,21 +107,21 @@ export default function HomePage() {
             <p>Начните отслеживать свои привычки прямо сейчас</p>
             <Link href="/habits/new" className="habits-create-btn" style={{ textAlign: 'center', textDecoration: 'none' }}>Создать привычку</Link>
           </div>
-        ) : todays.length === 0 ? (
+        ) : listed.length === 0 ? (
           <div className="today-empty-note-card">
-            <h3>На сегодня ничего не запланировано</h3>
-            <p>Привычки, отмеченные на сегодняшний день, появятся здесь</p>
+            <h3>{onYesterday ? 'На вчера ничего не было запланировано' : 'На сегодня ничего не запланировано'}</h3>
+            <p>{onYesterday ? 'Отмечать нечего — можно вернуться к сегодняшним привычкам' : 'Привычки, отмеченные на сегодняшний день, появятся здесь'}</p>
           </div>
         ) : (
           <div className="today-habits-list">
-            {todays.map((h) => (
+            {listed.map((h) => (
               <button key={h.id} type="button" className={'today-habit-row' + (h.doneToday ? ' done' : '')}
-                aria-pressed={h.doneToday} onClick={() => toggleHabit(h.id)}
+                aria-pressed={h.doneToday} onClick={() => list.toggleHabit(h.id)}
                 style={{ width: '100%', border: 'none', textAlign: 'left', font: 'inherit' }}>
                 <div className="today-habit-check"><CheckIcon /></div>
                 <div className="today-habit-info">
                   <h4>{h.title}</h4>
-                  <p>{h.category} • {h.frequency}</p>
+                  <p>{h.category} • {scheduleLabel(h)}</p>
                 </div>
                 {h.goal && (
                   <span className="today-habit-goal-badge" title="Прогресс цели">
@@ -113,7 +133,6 @@ export default function HomePage() {
           </div>
         )}
       </div>
-      <BottomNav />
     </section>
   );
 }

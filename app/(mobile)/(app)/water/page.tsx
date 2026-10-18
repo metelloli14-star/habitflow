@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { BottomNav } from '@/components/BottomNav';
 import { PillGroup } from '@/components/PillGroup';
 import { ScreenBackground } from '@/components/ScreenBackground';
 import { ScreenHeader } from '@/components/ScreenHeader';
@@ -34,7 +33,7 @@ export default function WaterPage() {
         <ScreenHeader className="water-header" subtitleClassName="water-subtitle" title="Водный баланс" subtitle="Мониторинг за сегодня" />
 
         <div className="water-summary-card">
-          <div className="water-ring">
+          <div className={'water-ring' + (pct >= 100 ? ' reached' : '')}>
             <svg viewBox="0 0 230 230">
               <defs>
                 <linearGradient id="waterRingGradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -108,7 +107,6 @@ export default function WaterPage() {
           )}
         </div>
       </div>
-      <BottomNav />
     </section>
   );
 }

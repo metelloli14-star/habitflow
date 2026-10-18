@@ -2,24 +2,35 @@
 
 import useSWR from 'swr';
 import { api, fetcher } from '@/lib/client/api';
+import { trackGoal } from '@/lib/client/analytics';
+import { haptic } from '@/lib/client/haptics';
 import type { HabitDTO, HabitInput } from '@/lib/shared/types';
 import { keys, refreshHabitData } from './keys';
 import { useToday } from './useToday';
 
-/** All habits with today's status. Also exposes create / update / delete / toggle. */
-export function useHabits() {
+/**
+ * All habits with their status on `day` — today by default, or e.g. yesterday to mark what was forgotten.
+ * Also exposes create / toggle.
+ */
+export function useHabits(day?: string) {
   const today = useToday();
-  const { data, error, isLoading, mutate } = useSWR<HabitDTO[]>(today ? keys.habits(today) : null, fetcher);
+  const date = day ?? today;
+  const { data, error, isLoading, mutate } = useSWR<HabitDTO[]>(date ? keys.habits(date) : null, fetcher);
 
   const createHabit = async (input: HabitInput) => {
     const habit = await api.post<HabitDTO>(keys.habits(today!), input);
+    trackGoal('habit_created');
     await refreshHabitData();
     return habit;
   };
 
-  /** Marks a habit done/undone for today. Updates the UI instantly, then syncs with the server. */
+  /** Marks a habit done/undone on that day. Updates the UI instantly, then syncs with the server. */
   const toggleHabit = async (id: string) => {
-    if (!today || !data) return;
+    if (!date || !data) return;
+    if (data.find((h) => h.id === id)?.doneToday === false) {
+      haptic();
+      trackGoal('habit_marked', { day: date === today ? 'today' : 'past' });
+    }
     const optimistic = data.map((h) =>
       h.id === id
         ? { ...h, doneToday: !h.doneToday, progressDone: h.progressDone + (h.doneToday ? -1 : 1) }
@@ -27,7 +38,7 @@ export function useHabits() {
     );
     await mutate(
       async () => {
-        await api.post<HabitDTO>(`/api/habits/${id}/toggle?date=${today}`);
+        await api.post<HabitDTO>(`/api/habits/${id}/toggle?date=${date}`);
         return undefined;
       },
       { optimisticData: optimistic, rollbackOnError: true, populateCache: false, revalidate: false },
@@ -37,9 +48,11 @@ export function useHabits() {
 
   return {
     habits: data ?? [],
-    isLoading: !today || isLoading,
+    isLoading: !date || isLoading,
     error,
     today,
+    /** The day the statuses are for. */
+    day: date,
     createHabit,
     toggleHabit,
   };
@@ -64,4 +77,10 @@ export function useHabit(id: string) {
   };
 
   return { habit: data ?? null, isLoading: !today || isLoading, error, updateHabit, deleteHabit };
+}
+
+/** Days the habit was done since `from` (YYYY-MM-DD) — for the history calendar. */
+export function useHabitHistory(id: string, from: string | null) {
+  const { data, isLoading } = useSWR<{ dates: string[] }>(from ? `/api/habits/${id}/history?from=${from}` : null, fetcher);
+  return { dates: data?.dates ?? null, isLoading };
 }

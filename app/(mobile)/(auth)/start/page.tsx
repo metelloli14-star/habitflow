@@ -2,7 +2,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { StatusBar } from '@/components/StatusBar';
 
-// Shown once, right after the email is confirmed.
+// Shown once, right after the email is confirmed. "Начать" leads to the guide on installing the app
+// (it sends people straight to the app when they're already in the installed one).
 export default function StartPage() {
   return (
     <section id="screen-start" className="screen active">
@@ -15,7 +16,7 @@ export default function StartPage() {
       <div className="welcome-content start-content">
         <h1>Начни<br />менять свою<br />жизнь!</h1>
         <p className="sub">Твой путь к лучшим привычкам<br />начинается здесь</p>
-        <Link href="/home" className="glass-btn">Начать</Link>
+        <Link href="/install" className="glass-btn">Начать</Link>
       </div>
     </section>
   );

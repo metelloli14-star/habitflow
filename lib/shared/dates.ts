@@ -95,3 +95,45 @@ export function isHabitScheduledOn(habit: { frequency: Frequency; days: string[]
   if (habit.frequency === 'Ежемесячно') return habit.days.includes(String(parseDateStr(date).getDate()));
   return false;
 }
+
+/** Calendar day ('YYYY-MM-DD') and minutes since midnight at moment `at` in an IANA time zone, e.g. 'Europe/Moscow'. */
+export function zonedNow(timeZone: string, at: Date): { date: string; minutes: number } {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  }).formatToParts(at);
+  const get = (type: Intl.DateTimeFormatPartTypes) => parts.find((p) => p.type === type)?.value ?? '00';
+  return { date: `${get('year')}-${get('month')}-${get('day')}`, minutes: Number(get('hour')) * 60 + Number(get('minute')) };
+}
+
+export function isValidTimeZone(value: unknown): value is string {
+  if (typeof value !== 'string' || !value || value.length > 64) return false;
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: value });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Human-readable schedule for habit lists: «Каждый день», «Пн, Ср, Пт», «1 и 15 числа». */
+export function scheduleLabel(habit: { frequency: Frequency; days: string[] }): string {
+  if (habit.frequency === 'Ежедневно') return 'Каждый день';
+  if (habit.frequency === 'Еженедельно') {
+    const days = WEEKDAYS.filter((d) => habit.days.includes(d));
+    if (days.length === 7) return 'Каждый день';
+    return days.length ? days.join(', ') : 'Дни не выбраны';
+  }
+  const dates = habit.days.map(Number).filter((n) => n > 0).sort((a, b) => a - b);
+  if (!dates.length) return 'Числа не выбраны';
+  if (dates.length > 4) return `${dates.length} дн. в месяц`;
+  return `${dates.length > 1 ? `${dates.slice(0, -1).join(', ')} и ${dates[dates.length - 1]}` : dates[0]} числа`;
+}
+
+/** «12–18 октября» or «29 сентября – 5 октября». */
+export function formatWeekRange(start: string, end: string): string {
+  const a = parseDateStr(start);
+  const b = parseDateStr(end);
+  return a.getMonth() === b.getMonth()
+    ? `${a.getDate()}–${b.getDate()} ${MONTHS_GENITIVE[b.getMonth()]}`
+    : `${a.getDate()} ${MONTHS_GENITIVE[a.getMonth()]} – ${b.getDate()} ${MONTHS_GENITIVE[b.getMonth()]}`;
+}

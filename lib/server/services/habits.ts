@@ -97,6 +97,17 @@ export async function updateHabit(userId: string, habitId: string, patch: Partia
   return toHabitDTO(toHabitRecord(row), await completionDates(habitId), date);
 }
 
+/** Days (YYYY-MM-DD) the habit was done, from `from` on — for the history calendar. */
+export async function habitHistory(userId: string, habitId: string, from: string): Promise<string[]> {
+  await getOwnedHabit(userId, habitId);
+  const rows = await prisma.completion.findMany({
+    where: { habitId, date: { gte: toDbDate(from) } },
+    select: { date: true },
+    orderBy: { date: 'asc' },
+  });
+  return rows.map((c) => fromDbDate(c.date));
+}
+
 /** Deletes the habit; its completion history goes with it (ON DELETE CASCADE). */
 export async function deleteHabit(userId: string, habitId: string): Promise<void> {
   await getOwnedHabit(userId, habitId);

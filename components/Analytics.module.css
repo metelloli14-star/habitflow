@@ -1,0 +1,22 @@
+/* Cookie banner — shared by the site and the app, so it has its own scoped styles */
+.banner {
+  position: fixed; z-index: 2000; left: 50%; transform: translateX(-50%);
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  width: calc(100% - 32px); max-width: 480px; box-sizing: border-box;
+  padding: 16px; border-radius: 20px;
+  background: rgba(255, 255, 255, 0.97); box-shadow: 0 12px 40px rgba(26, 43, 56, 0.22);
+  font-family: var(--font-inter), 'Inter', sans-serif; color: #1a2b38;
+}
+.text { margin: 0 0 12px; font-size: 13px; line-height: 1.45; color: #607d8e; }
+.text a { color: #2c6b9e; font-weight: 700; }
+.actions { display: flex; gap: 10px; }
+.actions button {
+  flex: 1; height: 44px; border-radius: 14px; cursor: pointer;
+  font-family: inherit; font-size: 14.5px; font-weight: 700;
+}
+.decline { border: 1px solid rgba(26, 43, 56, 0.15); background: #fff; color: #1a2b38; }
+.accept { border: none; background: linear-gradient(120deg, #a8c0d4, #6caca5); color: #fff; }
+.link {
+  border: none; background: none; padding: 0; cursor: pointer;
+  font: inherit; color: inherit; text-decoration: underline;
+}

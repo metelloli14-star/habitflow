@@ -2,6 +2,7 @@
 
 import { mutate } from 'swr';
 import { api } from '@/lib/client/api';
+import { forgetPushOnThisDevice } from '@/lib/client/push';
 import type { Gender, UserDTO } from '@/lib/shared/types';
 import { clearAllData, keys } from './keys';
 
@@ -11,6 +12,8 @@ export interface ProfileUpdate {
   gender?: Gender;
   /** data URL to set a photo, null to remove it, omit to keep the current one */
   avatar?: string | null;
+  waterReminders?: boolean;
+  weeklySummary?: boolean;
 }
 
 /** The profile response; `devCode` only comes from the mock backend in development. */
@@ -43,6 +46,7 @@ export const profileApi = {
   },
   async deleteAccount() {
     await api.del('/api/account');
+    await forgetPushOnThisDevice();
     await clearAllData();
   },
 };

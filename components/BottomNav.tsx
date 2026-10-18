@@ -11,6 +11,10 @@ const ITEMS = [
   { href: '/goals', label: 'ЦЕЛИ', Icon: TrophyIcon },
 ];
 
+/** The four tabs: switching between them is instant, like in a native app. */
+export const TAB_PATHS = ITEMS.map((i) => i.href);
+
+/** Rendered once by the app layout, so it stays in place while screens change. */
 export function BottomNav() {
   const pathname = usePathname();
   return (

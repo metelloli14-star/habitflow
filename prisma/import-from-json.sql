@@ -15,14 +15,13 @@ BEGIN;
 
 CREATE TEMP TABLE import_src ON COMMIT DROP AS SELECT :'content'::jsonb AS data;
 
-INSERT INTO users (id, name, email, password_hash, gender, avatar, water_goal, email_verified, codes,
+INSERT INTO users (id, name, email, password_hash, gender, water_goal, email_verified, codes,
                    pending_email, vk_id, login_failures, locked_until, first_use_date, created_at)
 SELECT (u->>'id')::uuid,
        u->>'name',
        NULLIF(u->>'email', ''),
        COALESCE(u->>'passwordHash', ''),
        COALESCE(u->>'gender', ''),
-       u->>'avatar',
        COALESCE((u->>'waterGoal')::int, 2000),
        COALESCE((u->>'emailVerified')::boolean, false),
        CASE WHEN jsonb_typeof(u->'codes') = 'object' THEN u->'codes' ELSE '{}'::jsonb END,
@@ -34,6 +33,19 @@ SELECT (u->>'id')::uuid,
        (u->>'createdAt')::timestamptz
 FROM import_src, jsonb_array_elements(data->'users') AS u
 ON CONFLICT DO NOTHING;
+
+-- Profile photos (data URLs in the file) go to their own table
+INSERT INTO avatars (user_id, mime_type, data)
+SELECT (u->>'id')::uuid,
+       substring(u->>'avatar' from '^data:([a-z/]+);base64,'),
+       decode(substring(u->>'avatar' from ',(.*)$'), 'base64')
+FROM import_src, jsonb_array_elements(data->'users') AS u
+WHERE u->>'avatar' ~ '^data:image/(jpeg|png|webp);base64,'
+  AND EXISTS (SELECT 1 FROM users WHERE id = (u->>'id')::uuid)
+ON CONFLICT (user_id) DO NOTHING;
+
+UPDATE users SET avatar_version = substr(md5(random()::text || id::text), 1, 12)
+WHERE avatar_version IS NULL AND id IN (SELECT user_id FROM avatars);
 
 INSERT INTO sessions (id, user_id, created_at)
 SELECT (s->>'id')::uuid, (s->>'userId')::uuid, (s->>'createdAt')::timestamptz

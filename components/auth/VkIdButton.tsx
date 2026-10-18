@@ -14,7 +14,7 @@ interface Props {
 /**
  * "Войти с VK ID": a full-page redirect to VK ID (not client-side navigation — the server sets the PKCE cookie).
  * Hidden when VK ID isn't configured in production. In development without keys it runs the mock flow.
- * Before publishing, replace the text mark with the official VK ID logo from VK's brand guidelines.
+ * Text only, in the VK ID blue — no home-made logo mark.
  */
 export function VkIdButton({ mode = 'login', blockedReason, onBlocked, label = 'Войти с VK ID' }: Props) {
   const { vk } = useAuthProviders();
@@ -30,14 +30,16 @@ export function VkIdButton({ mode = 'login', blockedReason, onBlocked, label = '
 
   return (
     <button type="button" className={'vkid-btn' + (blockedReason ? ' is-blocked' : '')} onClick={go}>
-      <span className="vkid-mark" aria-hidden="true">VK</span>
       {label}
       {vk === 'mock' && <span className="vkid-mock">тест</span>}
     </button>
   );
 }
 
+/** "— или —" before the VK ID button; hidden together with the button, so there's never an "or" with nothing after it. */
 export function AuthDivider() {
+  const { vk } = useAuthProviders();
+  if (vk === 'off' || vk === null) return null;
   return <div className="auth-divider"><span>или</span></div>;
 }
 
